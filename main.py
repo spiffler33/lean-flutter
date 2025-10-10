@@ -5,11 +5,11 @@ FastAPI backend with SQLite storage and HTMX frontend
 import os
 import sqlite3
 from datetime import datetime, timedelta
-from collections import Counter, defaultdict
 from pathlib import Path
 from typing import List, Optional
 import json
 import re
+from collections import Counter
 
 from fastapi import FastAPI, Request, Form, Query
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -119,26 +119,17 @@ async def get_entries(search: Optional[str] = None):
     c = conn.cursor()
 
     if search:
-        # Handle inline commands
         if search.startswith("/search "):
-            search = search[8:]  # Remove "/search " prefix
-        elif search == "/today":
-            today = datetime.now().strftime("%Y-%m-%d")
-            query = "SELECT * FROM entries WHERE date(created_at) = date(?) ORDER BY created_at DESC"
-            entries = c.execute(query, (today,)).fetchall()
+            search = search[8:]
+        if search == "/today":
+            entries = c.execute("SELECT * FROM entries WHERE date(created_at) = date('now') ORDER BY created_at DESC").fetchall()
         elif search == "/yesterday":
-            yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-            query = "SELECT * FROM entries WHERE date(created_at) = date(?) ORDER BY created_at DESC"
-            entries = c.execute(query, (yesterday,)).fetchall()
+            entries = c.execute("SELECT * FROM entries WHERE date(created_at) = date('now', '-1 day') ORDER BY created_at DESC").fetchall()
         elif search == "/week":
-            week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-            query = "SELECT * FROM entries WHERE date(created_at) >= date(?) ORDER BY created_at DESC"
-            entries = c.execute(query, (week_ago,)).fetchall()
+            entries = c.execute("SELECT * FROM entries WHERE date(created_at) >= date('now', '-7 days') ORDER BY created_at DESC").fetchall()
         else:
-            # Regular search in content and tags
-            query = "SELECT * FROM entries WHERE content LIKE ? OR tags LIKE ? ORDER BY created_at DESC"
-            search_term = f"%{search}%"
-            entries = c.execute(query, (search_term, search_term)).fetchall()
+            entries = c.execute("SELECT * FROM entries WHERE content LIKE ? OR tags LIKE ? ORDER BY created_at DESC",
+                              (f"%{search}%", f"%{search}%")).fetchall()
     else:
         entries = c.execute("SELECT * FROM entries ORDER BY created_at DESC LIMIT 50").fetchall()
 
@@ -149,9 +140,7 @@ async def get_entries(search: Optional[str] = None):
     # Format entries HTML
     html = ""
     for entry in entries:
-        content_html = format_content_with_tags(entry['content'])
-        # Replace newlines with <br> for display
-        content_html = content_html.replace('\n', '<br>')
+        content_html = format_content_with_tags(entry['content']).replace('\n', '<br>')
         relative_time = get_relative_time(entry['created_at'])
 
         # Check if it's a todo
@@ -200,32 +189,24 @@ async def create_entry(content: str = Form(...)):
     if not content.strip():
         return ""
 
-    # Check for commands
-    if (content.startswith("/search ") or
-        content == "/today" or
-        content == "/yesterday" or
-        content == "/week"):
-        # Return search results instead of creating entry
+    # Commands
+    if content.startswith("/search ") or content in ["/today", "/yesterday", "/week"]:
         return await get_entries(search=content)
 
-    # Save to database
+    # Save entry
     conn = get_db()
     c = conn.cursor()
     tags = json.dumps(extract_tags(content))
     c.execute("INSERT INTO entries (content, tags) VALUES (?, ?)", (content, tags))
     entry_id = c.lastrowid
     conn.commit()
-
-    # Get the created entry
     entry = c.execute("SELECT * FROM entries WHERE id = ?", (entry_id,)).fetchone()
     conn.close()
 
-    # Save to markdown
     save_entry_to_markdown(entry_id, content, entry['created_at'])
 
-    # Return formatted entry HTML
-    content_html = format_content_with_tags(content)
-    content_html = content_html.replace('\n', '<br>')
+    # Return HTML
+    content_html = format_content_with_tags(content).replace('\n', '<br>')
     relative_time = get_relative_time(entry['created_at'])
 
     # Check if it's a todo
@@ -267,25 +248,16 @@ async def update_entry(entry_id: int, content: str = Form(...)):
 
     conn = get_db()
     c = conn.cursor()
-
-    # Update the entry
     tags = json.dumps(extract_tags(content))
-    c.execute(
-        "UPDATE entries SET content = ?, tags = ? WHERE id = ?",
-        (content, tags, entry_id)
-    )
+    c.execute("UPDATE entries SET content = ?, tags = ? WHERE id = ?", (content, tags, entry_id))
     conn.commit()
-
-    # Get the updated entry
     entry = c.execute("SELECT * FROM entries WHERE id = ?", (entry_id,)).fetchone()
     conn.close()
 
     if not entry:
         return ""
 
-    # Format and return the updated entry
-    content_html = format_content_with_tags(content)
-    content_html = content_html.replace('\n', '<br>')
+    content_html = format_content_with_tags(content).replace('\n', '<br>')
     relative_time = get_relative_time(entry['created_at'])
 
     # Check if it's a todo
@@ -348,169 +320,114 @@ async def ai_summarize(count: int = Form(20)):
 
 @app.get("/stats")
 async def get_stats():
-    """Get statistics about entries"""
+    """Get beautiful statistics for modal display"""
     conn = get_db()
     c = conn.cursor()
 
-    # Get all entries for analysis
+    # Single efficient query for all entries with dates
     entries = c.execute("""
-        SELECT id, content, tags, created_at,
-               date(created_at) as date,
-               length(content) as char_count
+        SELECT content, date(created_at) as date, created_at
         FROM entries
         ORDER BY created_at DESC
     """).fetchall()
 
+    if not entries:
+        conn.close()
+        return JSONResponse({"empty": True})
+
     # Basic counts
     total_entries = len(entries)
-    total_chars = sum(e['char_count'] for e in entries)
     total_words = sum(len(e['content'].split()) for e in entries)
 
-    # Today's stats
+    # Date calculations
     today = datetime.utcnow().strftime("%Y-%m-%d")
-    today_entries = [e for e in entries if e['date'] == today]
-    today_count = len(today_entries)
-
-    # This week's stats
     week_ago = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
-    week_entries = [e for e in entries if e['date'] >= week_ago]
-    week_count = len(week_entries)
+    month_ago = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
 
-    # Daily activity for last 7 days
-    daily_counts = defaultdict(int)
-    for e in week_entries:
-        daily_counts[e['date']] += 1
+    today_count = len([e for e in entries if e['date'] == today])
+    week_count = len([e for e in entries if e['date'] >= week_ago])
+    month_count = len([e for e in entries if e['date'] >= month_ago])
 
-    # Build day-by-day activity
-    activity_7days = []
-    for i in range(6, -1, -1):
-        date = (datetime.utcnow() - timedelta(days=i))
-        date_str = date.strftime("%Y-%m-%d")
-        day_name = date.strftime("%a")
-        count = daily_counts.get(date_str, 0)
-        activity_7days.append({
-            'day': day_name,
-            'date': date_str,
-            'count': count
-        })
-
-    # Calculate max for scaling
-    max_day_count = max((d['count'] for d in activity_7days), default=1)
-
-    # Add sparkline bars
-    for day in activity_7days:
-        if day['count'] == 0:
-            day['bar'] = '▁'
-        else:
-            # Scale to 5 levels
-            level = int((day['count'] / max_day_count) * 4) + 1
-            bars = ['▁', '▃', '▅', '▇', '█']
-            day['bar'] = bars[min(level - 1, 4)] * min(5, max(1, int(day['count'] * 5 / max_day_count)))
-
-    # Top tags
-    all_tags = []
-    for e in entries:
-        if e['tags']:
-            try:
-                tags = json.loads(e['tags'])
-                all_tags.extend(tags)
-            except:
-                pass
-
-    tag_counts = Counter(all_tags)
-    top_tags = tag_counts.most_common(5)
-    max_tag_count = max((count for _, count in top_tags), default=1)
-
-    # Format top tags with bars
-    formatted_tags = []
-    for i, (tag, count) in enumerate(top_tags):
-        bar_length = int((count / max_tag_count) * 12)
-        formatted_tags.append({
-            'tag': f'#{tag}',
-            'bar': '█' * bar_length,
-            'count': count
-        })
-
-    # Calculate streak
-    dates_with_entries = sorted(list(set(e['date'] for e in entries)), reverse=True)
+    # Calculate streaks
+    dates = sorted(list(set(e['date'] for e in entries)), reverse=True)
     current_streak = 0
     longest_streak = 0
 
-    if dates_with_entries:
-        # Current streak
+    # Current streak
+    if dates:
         today_date = datetime.utcnow().date()
-        for i, date_str in enumerate(dates_with_entries):
+        for i, date_str in enumerate(dates):
             date = datetime.fromisoformat(date_str).date()
-            expected_date = today_date - timedelta(days=i)
-            if date == expected_date:
+            expected = today_date - timedelta(days=i)
+            if date == expected:
                 current_streak += 1
             else:
                 break
 
         # Longest streak
-        temp_streak = 1
-        for i in range(1, len(dates_with_entries)):
-            curr_date = datetime.fromisoformat(dates_with_entries[i]).date()
-            prev_date = datetime.fromisoformat(dates_with_entries[i-1]).date()
-            if (prev_date - curr_date).days == 1:
-                temp_streak += 1
-                longest_streak = max(longest_streak, temp_streak)
+        streak = 1
+        for i in range(1, len(dates)):
+            curr = datetime.fromisoformat(dates[i]).date()
+            prev = datetime.fromisoformat(dates[i-1]).date()
+            if (prev - curr).days == 1:
+                streak += 1
+                longest_streak = max(longest_streak, streak)
             else:
-                temp_streak = 1
-        longest_streak = max(longest_streak, temp_streak)
+                streak = 1
+        longest_streak = max(longest_streak, streak)
 
-    # 30-day heatmap
-    heatmap = []
-    for i in range(29, -1, -1):
-        date = (datetime.utcnow() - timedelta(days=i))
+    # Daily average
+    days_active = len(dates) if dates else 1
+    daily_avg = round(total_entries / days_active, 1)
+
+    # Best day
+    date_counts = Counter(e['date'] for e in entries)
+    best_date, best_count = date_counts.most_common(1)[0] if date_counts else (today, 0)
+    best_day_str = f"{best_count} ({datetime.fromisoformat(best_date).strftime('%b %d')})"
+
+    # Last 7 days activity
+    activity_7days = []
+    for i in range(6, -1, -1):
+        date = datetime.utcnow() - timedelta(days=i)
         date_str = date.strftime("%Y-%m-%d")
-        count = sum(1 for e in entries if e['date'] == date_str)
+        day_name = date.strftime("%a")
+        count = len([e for e in entries if e['date'] == date_str])
+        activity_7days.append({
+            'day': day_name,
+            'count': count
+        })
 
-        if count == 0:
-            heatmap.append('□')
-        elif count <= 2:
-            heatmap.append('▤')
-        elif count <= 5:
-            heatmap.append('▥')
-        elif count <= 10:
-            heatmap.append('▦')
-        elif count <= 15:
-            heatmap.append('▧')
-        elif count <= 20:
-            heatmap.append('▨')
-        else:
-            heatmap.append('█')
+    # Last 30 days for heatmap
+    heatmap_data = []
+    for i in range(29, -1, -1):
+        date_str = (datetime.utcnow() - timedelta(days=i)).strftime("%Y-%m-%d")
+        count = len([e for e in entries if e['date'] == date_str])
+        heatmap_data.append(count)
 
-    # Calculate trend (compare this week to last week)
-    last_week_start = (datetime.utcnow() - timedelta(days=14)).strftime("%Y-%m-%d")
-    last_week_end = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
-    last_week_count = len([e for e in entries if last_week_start <= e['date'] < last_week_end])
+    # Top 5 tags
+    all_tags = []
+    for e in entries:
+        tags = re.findall(r'#(\w+)', e['content'])
+        all_tags.extend(tags)
+
+    tag_counts = Counter(all_tags)
+    top_tags = [{'tag': tag, 'count': count} for tag, count in tag_counts.most_common(5)]
+
+    # Week trend
+    last_week = (datetime.utcnow() - timedelta(days=14)).strftime("%Y-%m-%d")
+    last_week_end = week_ago
+    last_week_count = len([e for e in entries if last_week <= e['date'] < last_week_end])
 
     if last_week_count > 0:
-        trend_percent = int(((week_count - last_week_count) / last_week_count) * 100)
-        if trend_percent > 0:
-            trend = f"▲ Up {trend_percent}%"
-        elif trend_percent < 0:
-            trend = f"▼ Down {abs(trend_percent)}%"
+        trend_pct = int(((week_count - last_week_count) / last_week_count) * 100)
+        if trend_pct > 0:
+            trend = f"▲ Up {trend_pct}%"
+        elif trend_pct < 0:
+            trend = f"▼ Down {abs(trend_pct)}%"
         else:
             trend = "→ Stable"
     else:
-        trend = "★ New this week!"
-
-    # Best day
-    if entries:
-        date_counts = Counter(e['date'] for e in entries)
-        best_date, best_count = date_counts.most_common(1)[0]
-        best_day = f"{best_count} ({datetime.fromisoformat(best_date).strftime('%b %d')})"
-    else:
-        best_day = "—"
-
-    # Average per day
-    if dates_with_entries:
-        days_active = len(dates_with_entries)
-        avg_per_day = round(total_entries / days_active, 1)
-    else:
-        avg_per_day = 0
+        trend = "▲ New week!"
 
     conn.close()
 
@@ -519,13 +436,14 @@ async def get_stats():
         'total_words': total_words,
         'today_count': today_count,
         'week_count': week_count,
-        'avg_per_day': avg_per_day,
-        'best_day': best_day,
+        'month_count': month_count,
+        'daily_avg': daily_avg,
+        'best_day': best_day_str,
         'current_streak': current_streak,
         'longest_streak': longest_streak,
         'activity_7days': activity_7days,
-        'top_tags': formatted_tags,
-        'heatmap': ''.join(heatmap),
+        'heatmap': heatmap_data,
+        'top_tags': top_tags,
         'trend': trend
     })
 

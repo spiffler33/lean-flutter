@@ -1730,6 +1730,7 @@
                         <div class="command"><span class="cmd">◉ /ai sum [N]</span><span class="desc">AI summary</span></div>
                         <div class="command"><span class="cmd">▨ /theme [name]</span><span class="desc">Change theme</span></div>
                         <div class="command"><span class="cmd">✎ /essay</span><span class="desc">Essay template</span></div>
+                        <div class="command"><span class="cmd">💡 /idea</span><span class="desc">Idea template</span></div>
                         <div class="command"><span class="cmd">? /help</span><span class="desc">Show this help</span></div>
 
 
@@ -1876,6 +1877,32 @@
                     input.setSelectionRange(titlePos, titlePos + 12); // Select [Title Here]
 
                     // Flash green to show successful template insertion
+                    input.classList.add('saving');
+                    setTimeout(() => input.classList.remove('saving'), 300);
+
+                    return;
+                }
+
+                // Idea command - minimal template
+                if (content === '/idea') {
+                    const ideaTemplate = `💡 [Title]
+
+[Describe the idea]
+
+Next step: [Action]
+
+#idea`;
+
+                    input.value = ideaTemplate;
+                    input.style.height = 'auto';
+                    input.rows = 8;
+                    autoResize();
+
+                    // Select title for quick editing
+                    const titlePos = ideaTemplate.indexOf('[Title]');
+                    input.setSelectionRange(titlePos, titlePos + 7);
+
+                    // Flash green for feedback
                     input.classList.add('saving');
                     setTimeout(() => input.classList.remove('saving'), 300);
 

@@ -10,6 +10,7 @@ from typing import List, Optional
 import json
 import re
 from collections import Counter
+import httpx
 
 from fastapi import FastAPI, Request, Form, Query
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -108,6 +109,32 @@ def save_entry_to_markdown(entry_id: int, content: str, created_at: str):
     time_str = dt.strftime("%H:%M:%S")
     with open(filename, 'a') as f:
         f.write(f"## {time_str}\n\n{content}\n\n---\n\n")
+
+async def get_llm_analysis(text: str) -> dict:
+    """
+    Call Ollama API to get tags and mood.
+
+    Args:
+        text: The entry text to analyze
+
+    Returns:
+        {"tags": ["tag1", "tag2"], "mood": "positive"}
+        On failure: {"tags": [], "mood": "neutral"}
+    """
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            prompt = f"Extract 1-3 single-word tags and mood (positive/negative/neutral/mixed) from: {text}\nRespond with valid JSON only."
+            response = await client.post(
+                "http://localhost:11434/api/generate",
+                json={"model": "llama3.2:3b", "prompt": prompt, "stream": False}
+            )
+            if response.status_code == 200:
+                result = response.json()
+                analysis = json.loads(result.get("response", "{}"))
+                return {"tags": analysis.get("tags", [])[:3], "mood": analysis.get("mood", "neutral")}
+    except:
+        pass
+    return {"tags": [], "mood": "neutral"}
 
 # Routes
 @app.get("/", response_class=HTMLResponse)

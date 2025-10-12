@@ -44,6 +44,15 @@ def init_db():
             tags TEXT
         )
     """)
+
+    # Check existing columns
+    c.execute("PRAGMA table_info(entries)")
+    columns = [col[1] for col in c.fetchall()]
+
+    # Add mood column if it doesn't exist
+    if 'mood' not in columns:
+        c.execute("ALTER TABLE entries ADD COLUMN mood TEXT")
+
     conn.commit()
     conn.close()
 

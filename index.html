@@ -5,17 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lean</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Critical above-fold CSS only -->
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
 
-        html {
-            scroll-behavior: smooth;
-        }
-
+        /* Critical body and layout */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Helvetica Neue", sans-serif;
             line-height: 1.6;
@@ -26,9 +22,9 @@
             margin: 0 auto;
             transition: all 0.3s ease;
             -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }
 
+        /* Critical header (above fold) */
         #lean-header {
             text-align: center;
             margin-bottom: 30px;
@@ -36,12 +32,9 @@
             transition: opacity 0.3s ease;
         }
 
-        #lean-header:hover {
-            opacity: 0.6;
-        }
+        #lean-header:hover { opacity: 0.6; }
 
         .lean-logo {
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
             font-size: 14px;
             font-weight: 300;
             letter-spacing: 8px;
@@ -55,383 +48,14 @@
             letter-spacing: 2px;
         }
 
-        /* Theme: Minimal (default) */
-        body.theme-minimal {
-            /* Uses existing styles */
-        }
-
-        /* Theme: Matrix */
-        body.theme-matrix {
-            background: #000000;
-            color: #00ff41;
-            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
-        }
-
-        body.theme-matrix #input-container {
-            background: #0a0a0a;
-            box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
-        }
-
-        body.theme-matrix #thought-input {
-            background: #000;
-            border-color: #00ff41;
-            color: #00ff41;
-            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
-        }
-
-        body.theme-matrix #thought-input:focus {
-            border-color: #00ff41;
-            box-shadow: 0 0 0 3px rgba(0, 255, 65, 0.2);
-        }
-
-        body.theme-matrix .entry {
-            background: #0a0a0a;
-            border: 1px solid #00ff4133;
-            box-shadow: none;
-        }
-
-        body.theme-matrix .entry-content,
-        body.theme-matrix .entry-meta {
-            color: #00ff41;
-        }
-
-        body.theme-matrix .tag {
-            color: #00ffaa;
-        }
-
-        body.theme-matrix .lean-logo {
-            color: #00ff41;
-            text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
-            font-family: 'SF Mono', 'Monaco', monospace;
-        }
-
-        body.theme-matrix .lean-tagline {
-            color: #00ff41;
-            opacity: 0.5;
-        }
-
-        body.theme-matrix .modal-content,
-        body.theme-matrix .help-tooltip {
-            background: #0a0a0a;
-            color: #00ff41;
-            border: 1px solid #00ff41;
-        }
-
-        body.theme-matrix .modal-close,
-        body.theme-matrix .modal-button {
-            color: #00ff41;
-            background: #000;
-            border-color: #00ff41;
-        }
-
-        body.theme-matrix .export-textarea {
-            background: #000;
-            color: #00ff41;
-            border-color: #00ff41;
-        }
-
-        /* Theme: Paper */
-        body.theme-paper {
-            background: #faf8f1;
-            color: #5c4b3a;
-            font-family: 'Charter', 'Georgia', 'Cambria', 'Times New Roman', serif;
-            font-size: 16px;
-            line-height: 1.7;
-        }
-
-        body.theme-paper #input-container {
-            background: #ffffff;
-            box-shadow: 0 2px 5px rgba(92, 75, 58, 0.1);
-        }
-
-        body.theme-paper #thought-input {
-            background: #ffffff;
-            border-color: #d4c4b0;
-            color: #5c4b3a;
-            font-family: 'Charter', 'Georgia', 'Cambria', serif;
-            font-size: 16px;
-        }
-
-        body.theme-paper #thought-input:focus {
-            border-color: #a0896f;
-            box-shadow: 0 0 0 3px rgba(160, 137, 111, 0.1);
-        }
-
-        body.theme-paper .entry {
-            background: #ffffff;
-            box-shadow: 0 1px 3px rgba(92, 75, 58, 0.1);
-        }
-
-        body.theme-paper .entry-content {
-            color: #5c4b3a;
-            font-size: 16px;
-            line-height: 1.7;
-        }
-
-        body.theme-paper .entry-meta {
-            color: #998675;
-        }
-
-        body.theme-paper .tag {
-            color: #7a6150;
-        }
-
-        body.theme-paper .lean-logo {
-            color: #8b7355;
-            font-family: 'Charter', 'Georgia', serif;
-            font-weight: normal;
-        }
-
-        body.theme-paper .lean-tagline {
-            color: #a0896f;
-        }
-
-        body.theme-paper .modal-content,
-        body.theme-paper .help-tooltip {
-            background: #ffffff;
-            color: #5c4b3a;
-        }
-
-        body.theme-paper .modal-button {
-            background: #f4f0e8;
-            color: #5c4b3a;
-            border-color: #d4c4b0;
-        }
-
-        body.theme-paper .export-textarea {
-            background: #ffffff;
-            color: #5c4b3a;
-        }
-
-        /* Theme: Midnight */
-        body.theme-midnight {
-            background: #0f0f23;
-            color: #c9d1d9;
-        }
-
-        body.theme-midnight #input-container {
-            background: #161b22;
-            box-shadow: 0 1px 3px rgba(27, 31, 36, 0.5);
-        }
-
-        body.theme-midnight #thought-input {
-            background: #0d1117;
-            border-color: #30363d;
-            color: #c9d1d9;
-        }
-
-        body.theme-midnight #thought-input:focus {
-            border-color: #58a6ff;
-            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
-        }
-
-        body.theme-midnight .entry {
-            background: #161b22;
-            box-shadow: 0 1px 2px rgba(27, 31, 36, 0.3);
-        }
-
-        body.theme-midnight .entry-content {
-            color: #c9d1d9;
-        }
-
-        body.theme-midnight .entry-meta {
-            color: #8b949e;
-        }
-
-        body.theme-midnight .tag {
-            color: #79c0ff;
-        }
-
-        body.theme-midnight .lean-logo {
-            color: #58a6ff;
-        }
-
-        body.theme-midnight .lean-tagline {
-            color: #30363d;
-        }
-
-        body.theme-midnight .modal-content,
-        body.theme-midnight .help-tooltip {
-            background: #161b22;
-            color: #c9d1d9;
-        }
-
-        body.theme-midnight .modal-button {
-            background: #21262d;
-            color: #c9d1d9;
-            border-color: #30363d;
-        }
-
-        body.theme-midnight .export-textarea {
-            background: #0d1117;
-            color: #c9d1d9;
-            border-color: #30363d;
-        }
-
-        /* Theme: Mono */
-        body.theme-mono {
-            background: #ffffff;
-            color: #000000;
-        }
-
-        body.theme-mono #input-container {
-            background: #ffffff;
-            border: 2px solid #000000;
-            box-shadow: none;
-            border-radius: 0;
-        }
-
-        body.theme-mono #thought-input {
-            background: #ffffff;
-            border: 2px solid #000000;
-            color: #000000;
-            border-radius: 0;
-        }
-
-        body.theme-mono #thought-input:focus {
-            border-color: #000000;
-            box-shadow: none;
-            outline: 2px solid #000000;
-            outline-offset: 2px;
-        }
-
-        body.theme-mono .entry {
-            background: #ffffff;
-            border: 1px solid #000000;
-            box-shadow: none;
-            border-radius: 0;
-        }
-
-        body.theme-mono .entry-content,
-        body.theme-mono .entry-meta {
-            color: #000000;
-        }
-
-        body.theme-mono .tag {
-            color: #000000;
-            text-decoration: underline;
-        }
-
-        body.theme-mono .lean-logo {
-            color: #000000;
-            font-weight: 500;
-        }
-
-        body.theme-mono .lean-tagline {
-            color: #000000;
-        }
-
-        body.theme-mono .modal-content,
-        body.theme-mono .help-tooltip {
-            background: #ffffff;
-            color: #000000;
-            border: 2px solid #000000;
-        }
-
-        body.theme-mono .modal-button {
-            background: #ffffff;
-            color: #000000;
-            border: 2px solid #000000;
-        }
-
-        body.theme-mono .export-textarea {
-            background: #ffffff;
-            color: #000000;
-            border: 2px solid #000000;
-        }
-
-        /* Time divider styles */
-        .time-divider {
-            text-align: center;
-            color: #999;
-            font-size: 13px;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-            letter-spacing: 1px;
-            padding: 20px 0;
-            opacity: 0.5;
-            user-select: none;
-            animation: fade-in 0.5s ease-out;
-        }
-
-        /* Theme-specific divider styles */
-        body.theme-matrix .time-divider {
-            color: #00ff41;
-            opacity: 0.3;
-        }
-
-        body.theme-paper .time-divider {
-            color: #a0896f;
-            opacity: 0.4;
-        }
-
-        body.theme-midnight .time-divider {
-            color: #8b949e;
-            opacity: 0.4;
-        }
-
-        body.theme-mono .time-divider {
-            color: #000;
-            opacity: 0.3;
-        }
-
+        /* Critical input container (above fold) */
         #input-container {
             background: white;
             border-radius: 12px;
             padding: 16px;
             margin-bottom: 24px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            position: sticky;
-            top: 20px;
-            z-index: 100;
             position: relative;
-        }
-
-        .char-counter {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            font-size: 11px;
-            color: #999;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        .char-counter.visible {
-            opacity: 1;
-        }
-
-        .char-counter.warning {
-            color: #f59e0b;
-        }
-
-        .char-counter.danger {
-            color: #ef4444;
-        }
-
-        .draft-indicator {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 11px;
-            color: #999;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .draft-indicator.visible {
-            opacity: 1;
-        }
-
-        .entry.editing {
-            background: #fffbeb;
-            border: 2px solid #f59e0b;
-            animation: pulse-edit 1s ease-in-out;
-        }
-
-        @keyframes pulse-edit {
-            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
-            50% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
         }
 
         #thought-input {
@@ -441,11 +65,10 @@
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             outline: none;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
             resize: vertical;
             min-height: 48px;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Helvetica Neue", sans-serif;
-            -webkit-font-smoothing: antialiased;
+            font-family: inherit;
         }
 
         #thought-input:focus {
@@ -453,10 +76,37 @@
             box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
         }
 
-        #thought-input.saving {
-            animation: pulse-green 0.3s ease-out;
+        /* Critical entry styles */
+        #entries { margin-top: 24px; }
+
+        .entry {
+            background: white;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            opacity: 1;
+            position: relative;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         }
 
+        .entry:hover { box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+
+        .entry-content {
+            color: #333;
+            margin-bottom: 6px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+
+        .entry-meta {
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        /* Critical animations */
         @keyframes pulse-green {
             0% {
                 border-color: #4CAF50;
@@ -470,151 +120,15 @@
             }
         }
 
-        #entries {
-            margin-top: 24px;
-        }
+        #thought-input.saving { animation: pulse-green 0.3s ease-out; }
 
-        .entry {
-            background: white;
-            border-radius: 8px;
-            padding: 14px 16px;
-            margin-bottom: 8px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            opacity: 1;
-            animation: fade-in 0.3s ease-out;
-            position: relative;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        }
-
-        .entry:hover {
-            box-shadow: 0 2px 4px rgba(0,0,0,0.06);
-        }
-
-        .entry.new-entry {
-            animation: slide-in 0.3s ease-out;
-        }
-
-        @keyframes fade-in {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes slide-in {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .entry-content {
-            color: #333;
-            margin-bottom: 6px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            line-height: 1.5;
-        }
-
-        .entry-meta {
-            font-size: 11px;
-            color: #aaa;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-        }
-
-        .success-indicator {
-            color: #4CAF50;
-            margin-left: 5px;
-            opacity: 0;
-            animation: fade-in-out 1.5s ease-out;
-        }
-
-        @keyframes fade-in-out {
-            0% { opacity: 0; }
-            20% { opacity: 1; }
-            80% { opacity: 1; }
-            100% { opacity: 0; }
-        }
-
-        .spinner {
-            display: inline-block;
-            animation: spin-unicode 1s linear infinite;
-        }
-
-        @keyframes spin-unicode {
-            0% { content: '⠋'; }
-            10% { content: '⠙'; }
-            20% { content: '⠹'; }
-            30% { content: '⠸'; }
-            40% { content: '⠼'; }
-            50% { content: '⠴'; }
-            60% { content: '⠦'; }
-            70% { content: '⠧'; }
-            80% { content: '⠇'; }
-            90% { content: '⠏'; }
-            100% { content: '⠋'; }
-        }
-
-        .entry-actions {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            display: flex;
-            gap: 8px;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-
-        .entry:hover .entry-actions {
-            opacity: 1;
-        }
-
-        .entry-action {
-            width: 24px;
-            height: 24px;
-            border: none;
-            background: none;
-            color: #999;
-            cursor: pointer;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-
-        .entry-action:hover {
-            color: #666;
-            background: rgba(0, 0, 0, 0.05);
-        }
-
-        .entry-action.delete:hover {
-            color: #ef4444;
-            background: rgba(239, 68, 68, 0.1);
-        }
-
-        .entry-counter {
-            text-align: center;
-            color: #999;
-            font-size: 13px;
-            padding: 30px 0 50px;
-            font-style: italic;
-        }
-
+        /* Critical tag styles */
         .tag {
             color: #4CAF50;
             text-decoration: none;
             font-weight: 500;
             cursor: pointer;
-            transition: color 0.2s ease, background 0.2s ease, transform 0.1s ease;
+            transition: all 0.2s ease;
             padding: 2px 4px;
             border-radius: 3px;
             margin: 0 1px;
@@ -622,441 +136,21 @@
 
         .tag:hover {
             background: rgba(76, 175, 80, 0.1);
-            color: #45a049;
             transform: scale(1.05);
         }
 
-        /* Auto-generated tags */
-        .tag.auto-tag {
-            opacity: 0.7;
-            font-style: italic;
-            color: #888;
-            font-size: 12px;
-            background: rgba(0, 0, 0, 0.05);
-            padding: 1px 6px;
-            border-radius: 3px;
-        }
-
-        .tag.auto-tag:hover {
-            opacity: 0.9;
-            background: rgba(0, 0, 0, 0.1);
-            color: #666;
-        }
-
-        /* AI processing indicator */
-        .ai-indicator {
-            display: inline-block;
-            margin-left: 8px;
-            color: #999;
-            font-size: 11px;
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 1; }
-        }
-
-        .no-entries {
+        /* Critical time divider */
+        .time-divider {
             text-align: center;
             color: #999;
-            padding: 40px;
-            font-size: 14px;
-        }
-
-        .search-indicator {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 12px;
-            padding: 8px;
-            background: #f0f0f0;
-            border-radius: 4px;
-        }
-
-        /* Hidden form for proper HTMX submission */
-        #entry-form {
-            display: none;
-        }
-
-        /* Export modal styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            animation: fade-in 0.2s ease;
-        }
-
-        .modal.show {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
-            display: flex;
-            flex-direction: column;
-            animation: slide-in 0.3s ease-out;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .modal-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            color: #999;
-            cursor: pointer;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            line-height: 1;
-        }
-
-        .modal-close:hover {
-            color: #666;
-        }
-
-        .modal-body {
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .export-textarea {
-            width: 100%;
-            height: 400px;
-            padding: 12px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            resize: vertical;
-        }
-
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            margin-top: 16px;
-        }
-
-        .modal-button {
-            padding: 8px 16px;
-            border-radius: 6px;
-            border: 1px solid #e0e0e0;
-            background: white;
-            color: #333;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .modal-button:hover {
-            background: #f5f5f5;
-        }
-
-        .modal-button.primary {
-            background: #4CAF50;
-            border-color: #4CAF50;
-            color: white;
-        }
-
-        .modal-button.primary:hover {
-            background: #45a049;
-        }
-
-        .export-options {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 16px;
-            padding: 16px;
-            background: #f5f5f5;
-            border-radius: 8px;
-        }
-
-        .export-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .export-label {
             font-size: 13px;
-            color: #666;
-            min-width: 100px;
+            letter-spacing: 1px;
+            padding: 20px 0;
+            opacity: 0.5;
+            user-select: none;
         }
 
-        .export-select {
-            flex: 1;
-            padding: 6px 12px;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            font-size: 13px;
-            background: white;
-        }
-
-        .export-checkbox {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-        }
-
-        .export-format-buttons {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .format-btn {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #e0e0e0;
-            background: white;
-            border-radius: 6px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .format-btn.active {
-            background: #4CAF50;
-            color: white;
-            border-color: #4CAF50;
-        }
-
-        .format-btn:hover:not(.active) {
-            background: #f5f5f5;
-        }
-
-        /* Stats modal styles */
-        .stats-modal-content {
-            max-width: 700px;
-            max-height: 90vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .stats-modal-content .modal-body {
-            overflow-y: auto;
-            flex: 1;
-            padding: 20px;
-        }
-
-        #stats-content {
-            font-family: 'Courier New', monospace;
-        }
-
-        #stats-content pre {
-            margin: 0;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        .stats-header {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 8px;
-            font-size: 18px;
-        }
-
-        .stats-section {
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-
-        .stats-section h4 {
-            margin: 0 0 10px 0;
-            color: #333;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .streak-display {
-            display: flex;
-            gap: 20px;
-            margin: 10px 0;
-        }
-
-        .streak-item {
-            flex: 1;
-        }
-
-        .activity-row {
-            display: flex;
-            align-items: center;
-            font-size: 13px;
-            margin: 4px 0;
-        }
-
-        .activity-day {
-            width: 40px;
-            color: #666;
-        }
-
-        .activity-bar {
-            flex: 1;
-            color: #4CAF50;
-            letter-spacing: -2px;
-        }
-
-        .activity-count {
-            width: 30px;
-            text-align: right;
-            color: #999;
-        }
-
-        .tag-row {
-            display: flex;
-            align-items: center;
-            margin: 6px 0;
-            font-size: 13px;
-        }
-
-        .tag-medal {
-            width: 30px;
-        }
-
-        .tag-name {
-            width: 80px;
-            color: #666;
-        }
-
-        .tag-bar {
-            flex: 1;
-            color: #4CAF50;
-        }
-
-        .tag-count {
-            width: 40px;
-            text-align: right;
-            color: #999;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .stat-cell {
-            padding: 12px;
-            text-align: center;
-            background: white;
-            border-right: 1px solid #ddd;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .stat-cell:nth-child(3n) {
-            border-right: none;
-        }
-
-        .stat-cell:nth-child(n+4) {
-            border-bottom: none;
-        }
-
-        .stat-label {
-            font-size: 11px;
-            color: #999;
-            margin-bottom: 4px;
-        }
-
-        .stat-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .heatmap-container {
-            font-size: 14px;
-            letter-spacing: 2px;
-            margin: 10px 0;
-            color: #4CAF50;
-        }
-
-        .trend-indicator {
-            text-align: center;
-            font-size: 14px;
-            padding: 10px;
-            background: #e8f5e9;
-            border-radius: 4px;
-            color: #2e7d32;
-        }
-
-        /* Help tooltip styles */
-        .help-tooltip {
-            background: #333;
-            color: white;
-            padding: 16px;
-            border-radius: 8px;
-            position: fixed;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 500;
-            max-width: 400px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            animation: slide-in 0.3s ease-out;
-            font-size: 13px;
-        }
-
-        .help-tooltip h4 {
-            margin: 0 0 12px 0;
-            color: #4CAF50;
-        }
-
-        .help-tooltip .command {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 0;
-            border-bottom: 1px solid #444;
-        }
-
-        .help-tooltip .command:last-child {
-            border-bottom: none;
-        }
-
-        .help-tooltip .cmd {
-            color: #4CAF50;
-            font-family: 'Courier New', monospace;
-        }
-
-        .help-tooltip .desc {
-            color: #ccc;
-            text-align: right;
-        }
-
-        /* Floating todo counter */
+        /* Critical todo counter */
         #todo-counter {
             position: fixed;
             top: 20px;
@@ -1066,265 +160,28 @@
             cursor: pointer;
             padding: 4px 8px;
             border-radius: 4px;
-            transition: opacity 0.2s ease, background 0.2s ease;
-            user-select: none;
+            transition: all 0.2s ease;
             z-index: 10;
             display: none;
         }
 
-        #todo-counter.visible {
-            display: block;
-        }
+        #todo-counter.visible { display: block; }
+        #todo-counter:hover { background: rgba(0, 0, 0, 0.05); }
+        #todo-counter.filtered { background: rgba(76, 175, 80, 0.1); color: #4CAF50; border: 1px solid #4CAF50; }
+        #todo-counter.has-old { color: #f59e0b; }
 
-        #todo-counter:hover {
-            opacity: 0.8;
-            background: rgba(0, 0, 0, 0.05);
-        }
+        /* Hidden form for HTMX */
+        #entry-form { display: none; }
 
-        #todo-counter.filtered {
-            background: rgba(76, 175, 80, 0.1);
-            color: #4CAF50;
-            border: 1px solid #4CAF50;
-        }
-
-        #todo-counter.has-old {
-            color: #f59e0b;
-        }
-
-        /* Theme-specific todo counter */
-        body.theme-matrix #todo-counter {
-            color: #00ff41;
-        }
-
-        body.theme-matrix #todo-counter.filtered {
-            background: rgba(0, 255, 65, 0.1);
-            border-color: #00ff41;
-        }
-
-        body.theme-paper #todo-counter {
-            color: #8b7355;
-        }
-
-        body.theme-midnight #todo-counter {
-            color: #8b949e;
-        }
-
-        body.theme-mono #todo-counter {
-            color: #000;
-        }
-
-        /* Todo checkbox styles */
-        .todo-checkbox {
-            display: inline;
-            margin-right: 6px;
-            cursor: pointer;
-            user-select: none;
-            font-size: inherit;
-            vertical-align: baseline;
-            transition: transform 0.1s ease;
-        }
-
-        .todo-checkbox:hover {
-            transform: scale(1.05);
-        }
-
-        .todo-checkbox:active {
-            transform: scale(0.95);
-        }
-
-        .todo-text {
-            display: inline;
-        }
-
-        .entry.todo-done .todo-text {
-            text-decoration: line-through;
-            opacity: 0.5;
-        }
-
-        .entry.todo-done .todo-checkbox {
-            color: #4CAF50;
-        }
-
-        /* Theme-specific todo styles */
-        body.theme-matrix .todo-checkbox {
-            color: #00ff41;
-        }
-
-        body.theme-paper .todo-checkbox {
-            color: #8b7355;
-        }
-
-        body.theme-midnight .todo-checkbox {
-            color: #58a6ff;
-        }
-
-        body.theme-mono .todo-checkbox {
-            color: #000;
-        }
-
-        /* Dark mode styles */
-        @media (prefers-color-scheme: dark) {
-            body {
-                background: #111;
-                color: #e4e4e7;
-            }
-
-            #input-container {
-                background: #1a1a1a;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-            }
-
-            #thought-input {
-                background: #262626;
-                border-color: #404040;
-                color: #e4e4e7;
-            }
-
-            #thought-input:focus {
-                border-color: #4CAF50;
-                box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
-            }
-
-            .entry {
-                background: #1a1a1a;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-            }
-
-            .entry-content {
-                color: #e4e4e7;
-            }
-
-            .entry-meta {
-                color: #71717a;
-            }
-
-            .entry-action {
-                color: #71717a;
-            }
-
-            .entry-action:hover {
-                color: #a1a1aa;
-                background: rgba(255, 255, 255, 0.05);
-            }
-
-            .entry-action.delete:hover {
-                color: #ef4444;
-                background: rgba(239, 68, 68, 0.15);
-            }
-
-            .modal-content {
-                background: #1a1a1a;
-                color: #e4e4e7;
-            }
-
-            .modal-close {
-                color: #71717a;
-            }
-
-            .modal-close:hover {
-                color: #a1a1aa;
-            }
-
-            .export-textarea {
-                background: #262626;
-                border-color: #404040;
-                color: #e4e4e7;
-            }
-
-            .modal-button {
-                background: #262626;
-                border-color: #404040;
-                color: #e4e4e7;
-            }
-
-            .modal-button:hover {
-                background: #333;
-            }
-
-            .search-indicator {
-                background: #262626;
-                color: #a1a1aa;
-            }
-
-            .no-entries {
-                color: #71717a;
-            }
-
-            .entry.editing {
-                background: #332b00;
-                border-color: #a57c00;
-            }
-
-            .export-options {
-                background: #262626;
-            }
-
-            .export-label {
-                color: #a1a1aa;
-            }
-
-            .export-select {
-                background: #1a1a1a;
-                border-color: #404040;
-                color: #e4e4e7;
-            }
-
-            .format-btn {
-                background: #262626;
-                border-color: #404040;
-                color: #e4e4e7;
-            }
-
-            .format-btn:hover:not(.active) {
-                background: #333;
-            }
-
-            .stats-header {
-                background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
-            }
-
-            .stats-section {
-                background: #262626;
-            }
-
-            .stats-section h4 {
-                color: #e4e4e7;
-            }
-
-            .stat-cell {
-                background: #1a1a1a;
-                border-color: #404040;
-            }
-
-            .stat-value {
-                color: #e4e4e7;
-            }
-
-            .activity-day, .tag-name {
-                color: #a1a1aa;
-            }
-
-            .trend-indicator {
-                background: #1a3a1a;
-                color: #4CAF50;
-            }
-
-            #status-bar {
-                background: #1a1a1a;
-                border-top-color: #404040;
-                color: #71717a;
-            }
-
-            .status-separator {
-                color: #404040;
-            }
-
-            .time-divider {
-                color: #71717a;
-                opacity: 0.4;
-            }
+        .entry.new-entry { animation: slide-in 0.3s ease-out; }
+        @keyframes slide-in {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
+
+    <!-- Non-critical styles loaded async -->
+    <link rel="stylesheet" href="/static/lean.css" media="print" onload="this.media='all'">
 </head>
 <body>
     <div id="lean-header">
@@ -1332,60 +189,44 @@
         <div class="lean-tagline">━━━━━━━━━</div>
     </div>
 
-    <!-- Floating Todo Counter -->
-    <div id="todo-counter" onclick="toggleTodoFilter()"></div>
+    <div id="todo-counter" onclick="LeanApp.toggleTodoFilter()"></div>
 
     <div id="input-container">
-        <textarea
-            id="thought-input"
-            placeholder="What's on your mind?"
-            autofocus
-            rows="1"
-        ></textarea>
-
+        <textarea id="thought-input" placeholder="What's on your mind?" autofocus rows="1"></textarea>
         <div id="char-counter" class="char-counter"></div>
         <div id="draft-indicator" class="draft-indicator">Draft saved</div>
 
-        <!-- Hidden form for HTMX -->
-        <form id="entry-form"
-              hx-post="/entries"
-              hx-target="#entries"
-              hx-swap="afterbegin">
+        <form id="entry-form" hx-post="/entries" hx-target="#entries" hx-swap="afterbegin">
             <input type="hidden" name="content" id="hidden-content">
         </form>
     </div>
 
-    <div id="entries" hx-get="/entries" hx-trigger="load">
-        <!-- Entries will be loaded here -->
-    </div>
+    <div id="entries" hx-get="/entries" hx-trigger="load"></div>
 
-    <!-- Stats Modal -->
+    <!-- Modals -->
     <div id="stats-modal" class="modal">
         <div class="modal-content stats-modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">▊ Your Thought Patterns</h3>
-                <button class="modal-close" onclick="closeStatsModal()">×</button>
+                <button class="modal-close" onclick="LeanApp.closeStatsModal()">×</button>
             </div>
             <div class="modal-body">
-                <div id="stats-content">
-                    <!-- Stats will be loaded here -->
-                </div>
+                <div id="stats-content"></div>
             </div>
         </div>
     </div>
 
-    <!-- Export Modal -->
     <div id="export-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">Export Entries</h3>
-                <button class="modal-close" onclick="closeExportModal()">×</button>
+                <button class="modal-close" onclick="LeanApp.closeExportModal()">×</button>
             </div>
             <div class="modal-body">
                 <div class="export-options">
                     <div class="export-row">
                         <label class="export-label">Date Range:</label>
-                        <select id="export-date-range" class="export-select" onchange="updateExport()">
+                        <select id="export-date-range" class="export-select" onchange="LeanApp.updateExport()">
                             <option value="all">All time</option>
                             <option value="day">Last 24 hours</option>
                             <option value="week">Last 7 days</option>
@@ -1394,454 +235,263 @@
                     </div>
                     <div class="export-row">
                         <label class="export-label">Filter by tag:</label>
-                        <input type="text" id="export-tag-filter" class="export-select" placeholder="e.g., #work (optional)" oninput="updateExport()">
+                        <input type="text" id="export-tag-filter" class="export-select" placeholder="e.g., #work (optional)" oninput="LeanApp.updateExport()">
                     </div>
                     <div class="export-row">
                         <label class="export-checkbox">
-                            <input type="checkbox" id="export-include-timestamps" checked onchange="updateExport()">
+                            <input type="checkbox" id="export-include-timestamps" checked onchange="LeanApp.updateExport()">
                             Include timestamps
                         </label>
                     </div>
                 </div>
                 <div class="export-format-buttons">
-                    <button class="format-btn active" id="format-markdown" onclick="setExportFormat('markdown')">Markdown</button>
-                    <button class="format-btn" id="format-writeas" onclick="setExportFormat('writeas')">write.as</button>
+                    <button class="format-btn active" id="format-markdown" onclick="LeanApp.setExportFormat('markdown')">Markdown</button>
+                    <button class="format-btn" id="format-writeas" onclick="LeanApp.setExportFormat('writeas')">write.as</button>
                 </div>
                 <textarea id="export-content" class="export-textarea" readonly></textarea>
             </div>
             <div class="modal-footer">
-                <button class="modal-button" onclick="closeExportModal()">Close</button>
-                <button class="modal-button primary" id="copy-btn" onclick="copyExportContent()">Copy to Clipboard</button>
+                <button class="modal-button" onclick="LeanApp.closeExportModal()">Close</button>
+                <button class="modal-button primary" onclick="LeanApp.copyExportContent()">Copy to Clipboard</button>
             </div>
         </div>
     </div>
 
     <script>
-        const input = document.getElementById('thought-input');
-        const form = document.getElementById('entry-form');
-        const hiddenContent = document.getElementById('hidden-content');
-        const entriesContainer = document.getElementById('entries');
-        const charCounter = document.getElementById('char-counter');
-        const draftIndicator = document.getElementById('draft-indicator');
+    // Lean App - Refactored and componentized
+    const LeanApp = (function() {
+        'use strict';
 
-        let editingEntryId = null;
-        let draftTimer = null;
-        let currentTheme = localStorage.getItem('lean-theme') || 'minimal';
-        let todoFilterActive = false;
+        // ============ State ============
+        const state = {
+            editingEntryId: null,
+            draftTimer: null,
+            currentTheme: localStorage.getItem('lean-theme') || 'minimal',
+            todoFilterActive: false,
+            currentExportFormat: 'markdown'
+        };
 
-        // Apply saved theme on load
-        function applyTheme(theme) {
-            // Remove all theme classes
-            document.body.classList.remove('theme-minimal', 'theme-matrix', 'theme-paper', 'theme-midnight', 'theme-mono');
+        // ============ DOM Elements ============
+        const elements = {};
 
-            // Add the new theme class
-            document.body.classList.add(`theme-${theme}`);
+        // ============ Key Bindings ============
+        const KEYS = {
+            ENTER: 'Enter',
+            ESCAPE: 'Escape',
+            ARROW_UP: 'ArrowUp',
+            SLASH: '/',
+            modifiers: {
+                shift: 'shiftKey',
+                meta: 'metaKey',
+                ctrl: 'ctrlKey',
+                alt: 'altKey'
+            }
+        };
 
-            // Save to localStorage
-            localStorage.setItem('lean-theme', theme);
-            currentTheme = theme;
+        // ============ Commands ============
+        const COMMANDS = {
+            '/search': { handler: 'handleSearch', needsParam: true },
+            '/today': { handler: 'handleToday' },
+            '/yesterday': { handler: 'handleYesterday' },
+            '/week': { handler: 'handleWeek' },
+            '/clear': { handler: 'handleClear' },
+            '/stats': { handler: 'handleStats' },
+            '/export': { handler: 'handleExport' },
+            '/help': { handler: 'handleHelp' },
+            '/essay': { handler: 'handleEssay' },
+            '/idea': { handler: 'handleIdea' },
+            '/theme': { handler: 'handleTheme', needsParam: false },
+            '/ai sum': { handler: 'handleAiSummary', needsParam: false }
+        };
+
+        // ============ Core Functions ============
+
+        function init() {
+            // Cache DOM elements
+            elements.input = document.getElementById('thought-input');
+            elements.form = document.getElementById('entry-form');
+            elements.hiddenContent = document.getElementById('hidden-content');
+            elements.entries = document.getElementById('entries');
+            elements.charCounter = document.getElementById('char-counter');
+            elements.draftIndicator = document.getElementById('draft-indicator');
+            elements.todoCounter = document.getElementById('todo-counter');
+
+            // Set up event listeners
+            setupEventListeners();
+
+            // Initialize theme and features
+            applyTheme(state.currentTheme);
+            loadDraft();
+            elements.input.focus();
+
+            // Start observers
+            setupObservers();
+
+            // Initial updates
+            setTimeout(() => {
+                updateTodoCounter();
+                TimeDivider.insert();
+            }, 100);
         }
 
-        // Apply theme on page load
-        applyTheme(currentTheme);
+        function setupEventListeners() {
+            // Input events
+            elements.input.addEventListener('input', handleInput);
+            elements.input.addEventListener('keydown', handleInputKeydown);
 
-        // Toggle todo done/undone - make it globally available
-        window.toggleTodo = async function(entryId) {
-            const entry = document.querySelector(`.entry[data-id="${entryId}"]`);
-            if (!entry) return;
+            // Global keyboard shortcuts
+            document.addEventListener('keydown', handleGlobalKeydown);
 
-            // Get the text content without the checkbox
-            const todoText = entry.querySelector('.todo-text');
-            const content = todoText ? todoText.textContent : entry.querySelector('.entry-content').textContent.substring(2); // Skip checkbox character
-            const checkbox = entry.querySelector('.todo-checkbox');
+            // Modal close on escape or outside click
+            document.getElementById('stats-modal').addEventListener('click', handleModalOutsideClick);
+            document.getElementById('export-modal').addEventListener('click', handleModalOutsideClick);
+        }
 
-            let newContent;
-            if (content.includes('#done')) {
-                // Change #done back to #todo
-                newContent = content.replace('#done', '#todo');
-                checkbox.textContent = '□';
-                entry.classList.remove('todo-done');
-            } else {
-                // Change #todo to #done
-                newContent = content.replace('#todo', '#done');
-                checkbox.textContent = '☑';
-                entry.classList.add('todo-done');
-            }
-
-            // Update in backend
-            const formData = new FormData();
-            formData.append('content', newContent);
-
-            try {
-                const response = await fetch(`/entries/${entryId}`, {
-                    method: 'PUT',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    // Revert on error
-                    if (newContent.includes('#done')) {
-                        checkbox.textContent = '□';
-                        entry.classList.remove('todo-done');
-                    } else {
-                        checkbox.textContent = '☑';
-                        entry.classList.add('todo-done');
-                    }
+        function setupObservers() {
+            const observer = new MutationObserver(() => {
+                updateTodoCounter();
+                const firstEntry = elements.entries.querySelector('.entry[data-id]');
+                if (firstEntry && firstEntry.dataset.created) {
+                    localStorage.setItem('lean-last-entry-time', firstEntry.dataset.created);
                 }
+            });
 
-                // Update todo counter after successful toggle
-                setTimeout(updateTodoCounter, 100);
-            } catch (error) {
-                console.error('Failed to toggle todo:', error);
-            }
+            observer.observe(elements.entries, {
+                childList: true,
+                subtree: true
+            });
         }
 
-        // Unicode spinner characters for loading animation
-        const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-        let spinnerIndex = 0;
+        // ============ Input Handling ============
 
-        function createSpinner() {
-            const span = document.createElement('span');
-            span.className = 'unicode-spinner';
-            span.textContent = spinnerFrames[0];
-
-            const interval = setInterval(() => {
-                spinnerIndex = (spinnerIndex + 1) % spinnerFrames.length;
-                span.textContent = spinnerFrames[spinnerIndex];
-            }, 80);
-
-            span.dataset.intervalId = interval;
-            return span;
-        }
-
-        function stopSpinner(spinnerElement) {
-            if (spinnerElement && spinnerElement.dataset.intervalId) {
-                clearInterval(parseInt(spinnerElement.dataset.intervalId));
-            }
-        }
-
-        // Format relative time
-        function getRelativeTime(dateStr) {
-            const date = new Date(dateStr);
-            const now = new Date();
-            const seconds = Math.floor((now - date) / 1000);
-            const minutes = Math.floor(seconds / 60);
-            const hours = Math.floor(minutes / 60);
-            const days = Math.floor(hours / 24);
-
-            if (seconds < 60) return 'just now';
-            if (minutes === 1) return '1m ago';
-            if (minutes < 60) return `${minutes}m ago`;
-            if (hours === 1) return '1h ago';
-            if (hours < 24) return `${hours}h ago`;
-            if (days === 1) return 'yesterday';
-            if (days < 30) return `${days} days ago`;
-
-            // Fallback to formatted date
-            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        }
-
-        // Auto-resize textarea
-        function autoResize() {
-            input.style.height = 'auto';
-            input.style.height = input.scrollHeight + 'px';
-        }
-
-        // Update character counter
-        function updateCharCounter() {
-            const length = input.value.length;
-
-            if (length < 200) {
-                charCounter.classList.remove('visible');
-                return;
-            }
-
-            charCounter.classList.add('visible');
-
-            if (length < 280) {
-                charCounter.textContent = `${length}`;
-                charCounter.className = 'char-counter visible';
-            } else if (length < 400) {
-                charCounter.textContent = `${length} / 280`;
-                charCounter.className = 'char-counter visible warning';
-            } else {
-                charCounter.textContent = `${length} / 400`;
-                charCounter.className = 'char-counter visible danger';
-            }
-        }
-
-        // Save draft to localStorage
-        function saveDraft() {
-            if (input.value.trim()) {
-                localStorage.setItem('lean-draft', input.value);
-                draftIndicator.classList.add('visible');
-                setTimeout(() => {
-                    draftIndicator.classList.remove('visible');
-                }, 1000);
-            } else {
-                localStorage.removeItem('lean-draft');
-            }
-        }
-
-        // Load draft on page load
-        function loadDraft() {
-            const draft = localStorage.getItem('lean-draft');
-            if (draft) {
-                input.value = draft;
-                autoResize();
-                updateCharCounter();
-            }
-        }
-
-        // Input event listener
-        input.addEventListener('input', () => {
+        function handleInput() {
             autoResize();
             updateCharCounter();
 
-            // Auto-save draft after 3 seconds of inactivity
-            clearTimeout(draftTimer);
-            draftTimer = setTimeout(saveDraft, 3000);
-        });
+            clearTimeout(state.draftTimer);
+            state.draftTimer = setTimeout(saveDraft, 3000);
+        }
 
-        // Handle Enter key (save) vs Shift+Enter (newline) vs Up Arrow (edit)
-        input.addEventListener('keydown', async function(e) {
-            // Up Arrow - edit last entry
-            if (e.key === 'ArrowUp' && input.value === '') {
+        async function handleInputKeydown(e) {
+            // Arrow Up - Edit last entry
+            if (e.key === KEYS.ARROW_UP && elements.input.value === '') {
                 e.preventDefault();
-
-                // Get the first entry (most recent)
-                const firstEntry = entriesContainer.querySelector('.entry[data-id]');
-                if (!firstEntry) return;
-
-                const entryId = firstEntry.dataset.id;
-                const contentDiv = firstEntry.querySelector('.entry-content');
-                if (!contentDiv) return;
-
-                // Extract plain text from HTML content
-                let content = contentDiv.innerHTML
-                    .replace(/<br>/g, '\n')
-                    .replace(/<a[^>]*class="tag"[^>]*onclick="searchTag\('[^']*'\)"[^>]*>([^<]+)<\/a>/g, '$1')
-                    .replace(/<[^>]+>/g, '');
-
-                // Decode HTML entities
-                const textarea = document.createElement('textarea');
-                textarea.innerHTML = content;
-                content = textarea.value;
-
-                // Load into input for editing
-                input.value = content;
-                editingEntryId = entryId;
-                autoResize();
-                updateCharCounter();
-
-                // Highlight the entry being edited
-                firstEntry.classList.add('editing');
-
-                // Remove editing class from any other entries
-                document.querySelectorAll('.entry.editing').forEach(entry => {
-                    if (entry !== firstEntry) entry.classList.remove('editing');
-                });
-            }
-
-            // Escape key - clear or blur
-            if (e.key === 'Escape') {
-                if (input.value) {
-                    // Clear input if it has text
-                    input.value = '';
-                    autoResize();
-                    updateCharCounter();
-                    editingEntryId = null;
-
-                    // Remove editing highlight
-                    document.querySelectorAll('.entry.editing').forEach(entry => {
-                        entry.classList.remove('editing');
-                    });
-                } else {
-                    // Blur input if empty
-                    input.blur();
-                }
+                editLastEntry();
                 return;
             }
 
-            if (e.key === 'Enter' && !e.shiftKey) {
+            // Escape - Clear or blur
+            if (e.key === KEYS.ESCAPE) {
+                handleEscapeInInput();
+                return;
+            }
+
+            // Enter - Submit or new line
+            if (e.key === KEYS.ENTER && !e[KEYS.modifiers.shift]) {
                 e.preventDefault();
+                await handleSubmit();
+            }
+        }
 
-                const content = input.value.trim();
-                if (!content) return;
+        function handleGlobalKeydown(e) {
+            // Skip if in input or using modifiers
+            if (e.target === elements.input ||
+                e.target.tagName === 'INPUT' ||
+                e.target.tagName === 'TEXTAREA' ||
+                e[KEYS.modifiers.meta] ||
+                e[KEYS.modifiers.ctrl] ||
+                e[KEYS.modifiers.alt]) return;
 
-                // Check if it's a search/filter command
-                if (content.startsWith('/search ') ||
-                    content === '/today' ||
-                    content === '/yesterday' ||
-                    content === '/week') {
-                    // Perform search
-                    const response = await fetch('/entries?search=' + encodeURIComponent(content));
-                    const html = await response.text();
-                    entriesContainer.innerHTML = html;
+            // Jump to input on /
+            if (e.key === KEYS.SLASH) {
+                e.preventDefault();
+                elements.input.focus();
+                elements.input.value = '/';
+            }
 
-                    // Add search indicator
-                    let searchTerm = content;
-                    if (content.startsWith('/search ')) {
-                        searchTerm = 'search: ' + content.substring(8);
-                    } else if (content === '/today') {
-                        searchTerm = "today's entries";
-                    } else if (content === '/yesterday') {
-                        searchTerm = "yesterday's entries";
-                    } else if (content === '/week') {
-                        searchTerm = 'last 7 days';
-                    }
+            // Escape handling
+            if (e.key === KEYS.ESCAPE) {
+                handleGlobalEscape();
+            }
+        }
 
-                    const indicator = document.createElement('div');
-                    indicator.className = 'search-indicator';
-                    indicator.textContent = `Showing: ${searchTerm} (press Esc to clear)`;
-                    entriesContainer.insertBefore(indicator, entriesContainer.firstChild);
+        // ============ Command Processing ============
 
-                    input.value = '';
-                    autoResize();
-                    // Update todo counter to show global count
-                    updateTodoCounter();
+        async function handleSubmit() {
+            const content = elements.input.value.trim();
+            if (!content) return;
+
+            // Check for commands
+            for (const [cmd, config] of Object.entries(COMMANDS)) {
+                if (content.startsWith(cmd)) {
+                    await CommandHandlers[config.handler](content);
                     return;
                 }
+            }
 
-                if (content === '/stats') {
-                    // Show stats modal
-                    showStatsModal();
-                    input.value = '';
-                    autoResize();
-                    return;
-                }
+            // Handle editing or new entry
+            if (state.editingEntryId) {
+                await updateEntry(state.editingEntryId, content);
+            } else {
+                await createEntry(content);
+            }
+        }
 
-                if (content === '/help') {
-                    // Show help tooltip
-                    const existingHelp = document.querySelector('.help-tooltip');
-                    if (existingHelp) existingHelp.remove();
+        // ============ Command Handlers ============
 
-                    const helpDiv = document.createElement('div');
-                    helpDiv.className = 'help-tooltip';
-                    helpDiv.innerHTML = `
-                        <h4>Commands</h4>
-                        <div class="command"><span class="cmd">◎ /search term</span><span class="desc">Search entries</span></div>
-                        <div class="command"><span class="cmd">▦ /today</span><span class="desc">Today's entries</span></div>
-                        <div class="command"><span class="cmd">▦ /yesterday</span><span class="desc">Yesterday's entries</span></div>
-                        <div class="command"><span class="cmd">▦ /week</span><span class="desc">Last 7 days</span></div>
-                        <div class="command"><span class="cmd">≈ /clear</span><span class="desc">Clear view</span></div>
-                        <div class="command"><span class="cmd">▤ /export</span><span class="desc">Export as markdown</span></div>
-                        <div class="command"><span class="cmd">▊ /stats</span><span class="desc">View statistics</span></div>
-                        <div class="command"><span class="cmd">◉ /ai sum [N]</span><span class="desc">AI summary</span></div>
-                        <div class="command"><span class="cmd">▨ /theme [name]</span><span class="desc">Change theme</span></div>
-                        <div class="command"><span class="cmd">✎ /essay</span><span class="desc">Essay template</span></div>
-                        <div class="command"><span class="cmd">💡 /idea</span><span class="desc">Idea template</span></div>
-                        <div class="command"><span class="cmd">? /help</span><span class="desc">Show this help</span></div>
+        const CommandHandlers = {
+            async handleSearch(content) {
+                const response = await fetch('/entries?search=' + encodeURIComponent(content));
+                const html = await response.text();
+                elements.entries.innerHTML = html;
 
+                const searchTerm = content.startsWith('/search ')
+                    ? 'search: ' + content.substring(8)
+                    : content.replace('/', '') + "'s entries";
 
-                        <h4 style="margin-top: 12px;">Todos</h4>
-                        <div class="command"><span class="cmd">#todo</span><span class="desc">Creates checkbox</span></div>
-                        <div class="command"><span class="cmd">Click □</span><span class="desc">Mark as done</span></div>
+                addSearchIndicator(searchTerm);
+                clearInput();
+                updateTodoCounter();
+            },
 
-                        <h4 style="margin-top: 12px;">Keyboard</h4>
-                        <div class="command"><span class="cmd">↑</span><span class="desc">Edit last entry</span></div>
-                        <div class="command"><span class="cmd">/</span><span class="desc">Focus input</span></div>
-                        <div class="command"><span class="cmd">Esc</span><span class="desc">Clear/close</span></div>
+            async handleToday() {
+                await this.handleSearch('/today');
+            },
 
-                        <div style="margin-top: 12px; color: #999; font-size: 11px;">Press Esc to close</div>
-                    `;
-                    document.body.appendChild(helpDiv);
+            async handleYesterday() {
+                await this.handleSearch('/yesterday');
+            },
 
-                    // Auto-remove after 10 seconds
-                    setTimeout(() => {
-                        if (helpDiv.parentNode) helpDiv.remove();
-                    }, 10000);
+            async handleWeek() {
+                await this.handleSearch('/week');
+            },
 
-                    input.value = '';
-                    autoResize();
-                    return;
-                }
+            handleClear() {
+                elements.entries.innerHTML = '<div class="no-entries">View cleared. Start typing to add new thoughts!</div>';
+                state.todoFilterActive = false;
+                elements.todoCounter.classList.remove('filtered');
+                TimeDivider.insertForClear();
+                clearInput();
+                updateTodoCounter();
+            },
 
-                if (content === '/clear') {
-                    // Clear the view but preserve time divider
-                    // First, preserve any existing time divider
-                    const existingDivider = entriesContainer.querySelector('.time-divider');
+            handleStats() {
+                showStatsModal();
+                clearInput();
+            },
 
-                    // Clear all entries
-                    entriesContainer.innerHTML = '<div class="no-entries">View cleared. Start typing to add new thoughts!</div>';
+            handleExport() {
+                showExportModal();
+                clearInput();
+            },
 
-                    // Reset todo filter state
-                    todoFilterActive = false;
-                    const counter = document.getElementById('todo-counter');
-                    if (counter) {
-                        counter.classList.remove('filtered');
-                    }
+            handleHelp() {
+                showHelpTooltip();
+                clearInput();
+            },
 
-                    // Re-insert time divider if conditions are met
-                    insertTimeDividerForClear();
-
-                    input.value = '';
-                    autoResize();
-                    // Update todo counter to show global count
-                    updateTodoCounter();
-                    return;
-                }
-
-                // Check for AI summarize command
-                if (content.startsWith('/ai sum')) {
-                    const parts = content.split(' ');
-                    const count = parts.length > 2 ? parseInt(parts[2]) || 20 : 20;
-
-                    // Show loading state with Unicode spinner
-                    const loadingDiv = document.createElement('div');
-                    loadingDiv.className = 'entry';
-                    const contentDiv = document.createElement('div');
-                    contentDiv.className = 'entry-content';
-                    contentDiv.innerHTML = '◉ Generating summary ';
-                    const spinner = createSpinner();
-                    contentDiv.appendChild(spinner);
-                    loadingDiv.appendChild(contentDiv);
-                    entriesContainer.insertBefore(loadingDiv, entriesContainer.firstChild);
-
-                    // Call AI endpoint
-                    const formData = new FormData();
-                    formData.append('count', count);
-
-                    const response = await fetch('/ai/summarize', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await response.json();
-
-                    // Stop spinner and remove loading div
-                    stopSpinner(spinner);
-                    loadingDiv.remove();
-
-                    const summaryDiv = document.createElement('div');
-                    summaryDiv.className = 'entry';
-                    summaryDiv.style.background = '#f8f9fa';
-                    summaryDiv.innerHTML = `
-                        <div class="entry-content">
-                            <strong>◉ AI Summary (${data.count} entries):</strong><br><br>
-                            ${data.summary.replace(/\n/g, '<br>')}
-                        </div>
-                        <div class="entry-meta">Generated just now</div>
-                    `;
-                    entriesContainer.insertBefore(summaryDiv, entriesContainer.firstChild);
-
-                    input.value = '';
-                    autoResize();
-                    return;
-                }
-
-                if (content === '/export') {
-                    // Show export modal with current view
-                    showExportModal();
-                    input.value = '';
-                    autoResize();
-                    return;
-                }
-
-
-                // Essay command - insert template
-                if (content === '/essay') {
-                    // Essay template
-                    const essayTemplate = `# [Title Here]
+            handleEssay() {
+                const template = `# [Title Here]
 
 *[One-line hook that captures the essence]*
 
@@ -1863,29 +513,19 @@
 ---
 #essay #draft`;
 
-                    // Insert template into input
-                    input.value = essayTemplate;
+                elements.input.value = template;
+                elements.input.rows = 20;
+                autoResize();
 
-                    // Expand textarea to show full template (approximately 20 rows)
-                    input.style.height = 'auto';
-                    input.rows = 20;
-                    autoResize();
+                const titlePos = template.indexOf('# [') + 2;
+                elements.input.setSelectionRange(titlePos, titlePos + 12);
 
-                    // Position cursor after the first # (at title position)
-                    // Find the position after "# "
-                    const titlePos = essayTemplate.indexOf('# [') + 2;
-                    input.setSelectionRange(titlePos, titlePos + 12); // Select [Title Here]
+                elements.input.classList.add('saving');
+                setTimeout(() => elements.input.classList.remove('saving'), 300);
+            },
 
-                    // Flash green to show successful template insertion
-                    input.classList.add('saving');
-                    setTimeout(() => input.classList.remove('saving'), 300);
-
-                    return;
-                }
-
-                // Idea command - minimal template
-                if (content === '/idea') {
-                    const ideaTemplate = `💡 [Title]
+            handleIdea() {
+                const template = `💡 [Title]
 
 [Describe the idea]
 
@@ -1893,311 +533,337 @@ Next step: [Action]
 
 #idea`;
 
-                    input.value = ideaTemplate;
-                    input.style.height = 'auto';
-                    input.rows = 8;
-                    autoResize();
+                elements.input.value = template;
+                elements.input.rows = 8;
+                autoResize();
 
-                    // Select title for quick editing
-                    const titlePos = ideaTemplate.indexOf('[Title]');
-                    input.setSelectionRange(titlePos, titlePos + 7);
+                const titlePos = template.indexOf('[Title]');
+                elements.input.setSelectionRange(titlePos, titlePos + 7);
 
-                    // Flash green for feedback
-                    input.classList.add('saving');
-                    setTimeout(() => input.classList.remove('saving'), 300);
+                elements.input.classList.add('saving');
+                setTimeout(() => elements.input.classList.remove('saving'), 300);
+            },
 
-                    return;
-                }
+            handleTheme(content) {
+                const parts = content.split(' ');
+                if (parts.length > 1) {
+                    const theme = parts[1].toLowerCase();
+                    const validThemes = ['minimal', 'matrix', 'paper', 'midnight', 'mono'];
 
-                // Theme switcher
-                if (content.startsWith('/theme')) {
-                    const parts = content.split(' ');
-                    if (parts.length > 1) {
-                        const theme = parts[1].toLowerCase();
-                        const validThemes = ['minimal', 'matrix', 'paper', 'midnight', 'mono'];
-
-                        if (validThemes.includes(theme)) {
-                            applyTheme(theme);
-
-                            // Show confirmation
-                            const confirmDiv = document.createElement('div');
-                            confirmDiv.className = 'entry';
-                            confirmDiv.innerHTML = `
-                                <div class="entry-content">
-                                    ▪ Theme switched to <strong>${theme}</strong>
-                                </div>
-                                <div class="entry-meta">◷ just now</div>
-                            `;
-                            entriesContainer.insertBefore(confirmDiv, entriesContainer.firstChild);
-
-                            // Remove confirmation after 3 seconds
-                            setTimeout(() => confirmDiv.remove(), 3000);
-                        } else {
-                            // Show available themes
-                            const themesDiv = document.createElement('div');
-                            themesDiv.className = 'entry';
-                            themesDiv.innerHTML = `
-                                <div class="entry-content">
-                                    <strong>▪ Available themes:</strong><br>
-                                    /theme minimal - Clean and minimal (default)<br>
-                                    /theme matrix - Green phosphor terminal<br>
-                                    /theme paper - Warm paper-like colors<br>
-                                    /theme midnight - Deep blues and purples<br>
-                                    /theme mono - Pure black and white
-                                </div>
-                                <div class="entry-meta">◷ just now</div>
-                            `;
-                            entriesContainer.insertBefore(themesDiv, entriesContainer.firstChild);
-                        }
+                    if (validThemes.includes(theme)) {
+                        applyTheme(theme);
+                        showNotification(`Theme switched to ${theme}`);
                     } else {
-                        // Show current theme and options
-                        const infoDiv = document.createElement('div');
-                        infoDiv.className = 'entry';
-                        infoDiv.innerHTML = `
-                            <div class="entry-content">
-                                <strong>▪ Current theme: ${currentTheme}</strong><br><br>
-                                Available themes:<br>
-                                /theme minimal - Clean and minimal (default)<br>
-                                /theme matrix - Green phosphor terminal<br>
-                                /theme paper - Warm paper-like colors<br>
-                                /theme midnight - Deep blues and purples<br>
-                                /theme mono - Pure black and white
-                            </div>
-                            <div class="entry-meta">◷ just now</div>
-                        `;
-                        entriesContainer.insertBefore(infoDiv, entriesContainer.firstChild);
+                        showThemeOptions();
                     }
-
-                    input.value = '';
-                    autoResize();
-                    return;
-                }
-
-                // Check if we're editing an existing entry
-                if (editingEntryId) {
-                    // Update existing entry
-                    const formData = new FormData();
-                    formData.append('content', content);
-
-                    const response = await fetch(`/entries/${editingEntryId}`, {
-                        method: 'PUT',
-                        body: formData
-                    });
-                    const html = await response.text();
-
-                    // Replace the old entry with the updated one
-                    const oldEntry = document.querySelector(`.entry[data-id="${editingEntryId}"]`);
-                    if (oldEntry && html) {
-                        oldEntry.outerHTML = html;
-                    }
-
-                    // Reset editing state
-                    editingEntryId = null;
-                    input.value = '';
-                    autoResize();
-                    updateCharCounter();
-                    localStorage.removeItem('lean-draft');
-                    return;
-                }
-
-                // Visual feedback - flash green for new entry
-                input.classList.add('saving');
-                setTimeout(() => input.classList.remove('saving'), 300);
-
-                // Optimistic UI - immediately show the entry
-                const tempId = 'temp-' + Date.now();
-                const timeStr = '◷ just now';
-
-                // Format content with tags
-                const formattedContent = content.replace(/#(\w+)/g, '<a href="#" class="tag" onclick="searchTag(\'#$1\')">#$1</a>');
-                const displayContent = formattedContent.replace(/\n/g, '<br>');
-
-                const tempEntry = document.createElement('div');
-                tempEntry.className = 'entry new-entry';
-                tempEntry.dataset.tempId = tempId;
-                tempEntry.innerHTML = `
-                    <div class="entry-content">${displayContent}</div>
-                    <div class="entry-meta">${timeStr}<span class="success-indicator">✓</span></div>
-                `;
-
-                // Insert at the top
-                if (entriesContainer.firstChild && entriesContainer.firstChild.className === 'search-indicator') {
-                    entriesContainer.insertBefore(tempEntry, entriesContainer.children[1]);
                 } else {
-                    entriesContainer.insertBefore(tempEntry, entriesContainer.firstChild);
+                    showThemeInfo();
+                }
+                clearInput();
+            },
+
+            async handleAiSummary(content) {
+                const parts = content.split(' ');
+                const count = parts.length > 2 ? parseInt(parts[2]) || 20 : 20;
+
+                const loadingEntry = createLoadingEntry('◉ Generating summary');
+                elements.entries.insertBefore(loadingEntry, elements.entries.firstChild);
+
+                const formData = new FormData();
+                formData.append('count', count);
+
+                const response = await fetch('/ai/summarize', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                loadingEntry.remove();
+
+                const summaryEntry = createSummaryEntry(data);
+                elements.entries.insertBefore(summaryEntry, elements.entries.firstChild);
+
+                clearInput();
+            }
+        };
+
+        // ============ Entry Operations ============
+
+        async function createEntry(content) {
+            // Visual feedback
+            elements.input.classList.add('saving');
+            setTimeout(() => elements.input.classList.remove('saving'), 300);
+
+            // Optimistic UI
+            const tempEntry = createTempEntry(content);
+            insertEntry(tempEntry);
+
+            // Clear input immediately
+            clearInput();
+            localStorage.removeItem('lean-draft');
+
+            // Save to backend
+            elements.hiddenContent.value = content;
+            htmx.trigger(elements.form, 'submit');
+
+            // Remove temp entry after real one arrives
+            setTimeout(() => tempEntry.remove(), 500);
+        }
+
+        async function updateEntry(entryId, content) {
+            const formData = new FormData();
+            formData.append('content', content);
+
+            const response = await fetch(`/entries/${entryId}`, {
+                method: 'PUT',
+                body: formData
+            });
+            const html = await response.text();
+
+            const oldEntry = document.querySelector(`.entry[data-id="${entryId}"]`);
+            if (oldEntry && html) {
+                oldEntry.outerHTML = html;
+            }
+
+            state.editingEntryId = null;
+            clearInput();
+            localStorage.removeItem('lean-draft');
+        }
+
+        // ============ UI Components ============
+
+        const Toast = {
+            show(message, duration = 2000) {
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.textContent = message;
+                document.body.appendChild(toast);
+
+                setTimeout(() => toast.classList.add('visible'), 10);
+                setTimeout(() => {
+                    toast.classList.remove('visible');
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            }
+        };
+
+        const TimeDivider = {
+            insert() {
+                const firstEntry = elements.entries.querySelector('.entry[data-id]');
+                if (!firstEntry) return;
+
+                const createdAt = firstEntry.dataset.created;
+                if (!createdAt) return;
+
+                const entryTime = new Date(createdAt);
+                const now = new Date();
+                const hoursDiff = (now - entryTime) / (1000 * 60 * 60);
+
+                if (hoursDiff <= 2) return;
+
+                const dividerText = this.formatDividerText(now, hoursDiff);
+                const divider = this.createDividerElement(dividerText);
+                elements.entries.insertBefore(divider, firstEntry);
+            },
+
+            insertForClear() {
+                const lastEntryTime = localStorage.getItem('lean-last-entry-time');
+                if (!lastEntryTime) return;
+
+                const entryTime = new Date(lastEntryTime);
+                const now = new Date();
+                const hoursDiff = (now - entryTime) / (1000 * 60 * 60);
+
+                if (hoursDiff <= 2) return;
+
+                const dividerText = this.formatDividerText(now, hoursDiff);
+                const divider = this.createDividerElement(dividerText);
+                elements.entries.insertBefore(divider, elements.entries.firstChild);
+            },
+
+            formatDividerText(now, hoursDiff) {
+                const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+                const monthDay = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+                const time = now.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                }).toLowerCase();
+
+                if (hoursDiff > 24) {
+                    const daysDiff = Math.floor(hoursDiff / 24);
+                    return daysDiff === 1
+                        ? `${dayName}, ${monthDay}, ${time}`
+                        : `${dayName}, ${monthDay}, ${time} — ${daysDiff} days later`;
                 }
 
-                // Clear input immediately
-                input.value = '';
+                return `${dayName}, ${monthDay}, ${time}`;
+            },
+
+            createDividerElement(text) {
+                const textLength = text.length;
+                const totalWidth = 50;
+                const paddingLength = Math.max(3, Math.floor((totalWidth - textLength - 2) / 2));
+                const leftLine = '━'.repeat(paddingLength);
+                const rightLine = '━'.repeat(paddingLength);
+
+                const divider = document.createElement('div');
+                divider.className = 'time-divider';
+                divider.innerHTML = `${leftLine} ${text} ${rightLine}`;
+                return divider;
+            }
+        };
+
+        // ============ Utility Functions ============
+
+        function autoResize() {
+            elements.input.style.height = 'auto';
+            elements.input.style.height = elements.input.scrollHeight + 'px';
+        }
+
+        function updateCharCounter() {
+            const length = elements.input.value.length;
+
+            if (length < 200) {
+                elements.charCounter.classList.remove('visible');
+                return;
+            }
+
+            elements.charCounter.classList.add('visible');
+
+            if (length < 280) {
+                elements.charCounter.textContent = `${length}`;
+                elements.charCounter.className = 'char-counter visible';
+            } else if (length < 400) {
+                elements.charCounter.textContent = `${length} / 280`;
+                elements.charCounter.className = 'char-counter visible warning';
+            } else {
+                elements.charCounter.textContent = `${length} / 400`;
+                elements.charCounter.className = 'char-counter visible danger';
+            }
+        }
+
+        function saveDraft() {
+            if (elements.input.value.trim()) {
+                localStorage.setItem('lean-draft', elements.input.value);
+                elements.draftIndicator.classList.add('visible');
+                setTimeout(() => elements.draftIndicator.classList.remove('visible'), 1000);
+            } else {
+                localStorage.removeItem('lean-draft');
+            }
+        }
+
+        function loadDraft() {
+            const draft = localStorage.getItem('lean-draft');
+            if (draft) {
+                elements.input.value = draft;
                 autoResize();
                 updateCharCounter();
-                localStorage.removeItem('lean-draft');
-
-                // Now save to backend
-                hiddenContent.value = content;
-                htmx.trigger(form, 'submit');
-
-                // Remove temp entry after real one arrives (htmx will prepend the real one)
-                setTimeout(() => {
-                    const temp = document.querySelector(`[data-temp-id="${tempId}"]`);
-                    if (temp) temp.remove();
-                }, 500);
             }
-        });
-
-        // Jump to input on / key
-        document.addEventListener('keydown', function(e) {
-            // Don't trigger if already in input or if modifier keys are pressed
-            // Also check if target is any input or textarea element
-            if (e.target === input ||
-                e.target.tagName === 'INPUT' ||
-                e.target.tagName === 'TEXTAREA' ||
-                e.metaKey || e.ctrlKey || e.altKey) return;
-
-            if (e.key === '/') {
-                e.preventDefault();
-                input.focus();
-                // Put / in the input for search
-                input.value = '/';
-            }
-        });
-
-        // Clear search on Escape
-        document.addEventListener('keydown', async function(e) {
-            if (e.key === 'Escape') {
-                // Close help tooltip if present
-                const helpTooltip = document.querySelector('.help-tooltip');
-                if (helpTooltip) {
-                    helpTooltip.remove();
-                    input.focus();
-                    return;
-                }
-
-                const indicator = document.querySelector('.search-indicator');
-                if (indicator) {
-                    // Reload all entries
-                    const response = await fetch('/entries');
-                    const html = await response.text();
-                    entriesContainer.innerHTML = html;
-
-                    // Reset todo filter state
-                    todoFilterActive = false;
-                    const counter = document.getElementById('todo-counter');
-                    if (counter) {
-                        counter.classList.remove('filtered');
-                    }
-
-                    input.focus();
-                }
-            }
-        });
-
-        // Search by tag when clicked
-        async function searchTag(tag) {
-            const response = await fetch('/entries?search=' + encodeURIComponent(tag));
-            const html = await response.text();
-            entriesContainer.innerHTML = html;
-
-            // Add search indicator
-            const indicator = document.createElement('div');
-            indicator.className = 'search-indicator';
-            indicator.textContent = `Searching for: ${tag} (press Esc to clear)`;
-            entriesContainer.insertBefore(indicator, entriesContainer.firstChild);
-
-            input.focus();
         }
 
-        // Edit entry function
-        function editEntry(entryId) {
-            const entry = document.querySelector(`.entry[data-id="${entryId}"]`);
-            if (!entry) return;
-
-            const contentDiv = entry.querySelector('.entry-content');
-            if (!contentDiv) return;
-
-            // Extract plain text from HTML content
-            let content = contentDiv.innerHTML
-                .replace(/<br>/g, '\n')
-                .replace(/<a[^>]*class="tag"[^>]*onclick="searchTag\('[^']*'\)"[^>]*>([^<]+)<\/a>/g, '$1')
-                .replace(/<[^>]+>/g, '');
-
-            // Decode HTML entities
-            const textarea = document.createElement('textarea');
-            textarea.innerHTML = content;
-            content = textarea.value;
-
-            // Load into input for editing
-            input.value = content;
-            editingEntryId = entryId;
+        function clearInput() {
+            elements.input.value = '';
             autoResize();
             updateCharCounter();
-
-            // Highlight the entry being edited
-            entry.classList.add('editing');
-
-            // Remove editing class from any other entries
-            document.querySelectorAll('.entry.editing').forEach(e => {
-                if (e !== entry) e.classList.remove('editing');
-            });
-
-            // Focus input
-            input.focus();
         }
 
-        // Delete entry function
-        async function deleteEntry(entryId) {
+        function applyTheme(theme) {
+            document.body.classList.remove('theme-minimal', 'theme-matrix', 'theme-paper', 'theme-midnight', 'theme-mono');
+            document.body.classList.add(`theme-${theme}`);
+            localStorage.setItem('lean-theme', theme);
+            state.currentTheme = theme;
+        }
+
+        // ============ Todo Functions ============
+
+        async function toggleTodo(entryId) {
             const entry = document.querySelector(`.entry[data-id="${entryId}"]`);
             if (!entry) return;
 
-            // Simple confirmation - could be replaced with hold-to-delete
-            if (!confirm('Delete this entry?')) return;
+            const todoText = entry.querySelector('.todo-text');
+            const content = todoText ? todoText.textContent : entry.querySelector('.entry-content').textContent.substring(2);
+            const checkbox = entry.querySelector('.todo-checkbox');
+
+            let newContent;
+            if (content.includes('#done')) {
+                newContent = content.replace('#done', '#todo');
+                checkbox.textContent = '□';
+                entry.classList.remove('todo-done');
+            } else {
+                newContent = content.replace('#todo', '#done');
+                checkbox.textContent = '☑';
+                entry.classList.add('todo-done');
+            }
+
+            const formData = new FormData();
+            formData.append('content', newContent);
 
             try {
                 const response = await fetch(`/entries/${entryId}`, {
-                    method: 'DELETE'
+                    method: 'PUT',
+                    body: formData
                 });
 
-                if (response.ok) {
-                    // Animate out then remove
-                    entry.style.opacity = '0';
-                    entry.style.transform = 'translateX(-20px)';
-                    setTimeout(() => {
-                        entry.remove();
-                        // Update counter
-                        updateEntryCounter();
-                    }, 300);
+                if (!response.ok) {
+                    // Revert on error
+                    if (newContent.includes('#done')) {
+                        checkbox.textContent = '□';
+                        entry.classList.remove('todo-done');
+                    } else {
+                        checkbox.textContent = '☑';
+                        entry.classList.add('todo-done');
+                    }
+                }
+
+                setTimeout(updateTodoCounter, 100);
+            } catch (error) {
+                console.error('Failed to toggle todo:', error);
+            }
+        }
+
+        async function toggleTodoFilter() {
+            const entries = document.querySelectorAll('.entry[data-id]');
+
+            if (entries.length === 0 && !state.todoFilterActive) {
+                await fetchAndShowTodos();
+                return;
+            }
+
+            state.todoFilterActive = !state.todoFilterActive;
+
+            if (state.todoFilterActive) {
+                filterTodos(entries);
+            } else {
+                showAllEntries(entries);
+            }
+        }
+
+        async function updateTodoCounter() {
+            try {
+                const response = await fetch('/todo-count');
+                const data = await response.json();
+
+                if (data.count > 0) {
+                    elements.todoCounter.textContent = `□ ${data.count}`;
+                    elements.todoCounter.classList.add('visible');
+                    elements.todoCounter.classList.toggle('has-old', data.has_old);
+                } else {
+                    elements.todoCounter.classList.remove('visible');
+                    state.todoFilterActive = false;
+                    elements.todoCounter.classList.remove('filtered');
                 }
             } catch (error) {
-                console.error('Failed to delete entry:', error);
+                console.error('Failed to fetch todo count:', error);
             }
         }
 
-        // Update entry counter
-        function updateEntryCounter() {
-            const entries = document.querySelectorAll('.entry[data-id]');
-            const count = entries.length;
-            const counter = document.querySelector('.entry-counter');
+        // ============ Modal Functions ============
 
-            if (counter) {
-                const word = count === 1 ? 'thought' : 'thoughts';
-                counter.textContent = `${count} ${word} captured`;
-            }
-
-            // If no entries left, show the "no entries" message
-            if (count === 0) {
-                const entriesContainer = document.getElementById('entries');
-                if (!entriesContainer.querySelector('.no-entries')) {
-                    entriesContainer.innerHTML = '<div class="no-entries">No entries yet. Start typing above!</div><div class="entry-counter">0 thoughts captured</div>';
-                }
-            }
-        }
-
-        // Stats modal functions
         async function showStatsModal() {
             const modal = document.getElementById('stats-modal');
             const statsContent = document.getElementById('stats-content');
 
-            // Show loading state
             statsContent.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">Loading stats...</div>';
             modal.classList.add('show');
 
@@ -2210,37 +876,40 @@ Next step: [Action]
                     return;
                 }
 
-                // Format numbers with commas
-                const fmt = (n) => n.toLocaleString();
+                statsContent.innerHTML = formatStatsDisplay(data);
+            } catch (error) {
+                statsContent.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">Failed to load stats</div>';
+                console.error('Failed to load stats:', error);
+            }
+        }
 
-                // Build activity bars for 7 days
-                const maxCount = Math.max(...data.activity_7days.map(d => d.count));
-                const activityBars = data.activity_7days.map(d => {
-                    const barLength = maxCount > 0 ? Math.round((d.count / maxCount) * 20) : 0;
-                    const bar = '█'.repeat(barLength) || '▁';
-                    return `   ${d.day} ${bar} (${d.count})`;
-                }).join('\n');
+        function formatStatsDisplay(data) {
+            const fmt = (n) => n.toLocaleString();
 
-                // Build heatmap
-                const heatChars = ['□','▤','▥','▦','▧','▨','▩','█'];
-                const maxHeat = Math.max(...data.heatmap);
-                const heatmap = data.heatmap.map(count => {
-                    if (count === 0) return heatChars[0];
-                    const level = Math.min(7, Math.ceil((count / maxHeat) * 7));
-                    return heatChars[level];
-                }).join('');
+            const maxCount = Math.max(...data.activity_7days.map(d => d.count));
+            const activityBars = data.activity_7days.map(d => {
+                const barLength = maxCount > 0 ? Math.round((d.count / maxCount) * 20) : 0;
+                const bar = '█'.repeat(barLength) || '▁';
+                return `   ${d.day} ${bar} (${d.count})`;
+            }).join('\n');
 
-                // Build top tags
-                const maxTagCount = data.top_tags[0]?.count || 0;
-                const tagBars = data.top_tags.map((tag, i) => {
-                    const num = ['①','②','③','④','⑤'][i];
-                    const barLength = maxTagCount > 0 ? Math.round((tag.count / maxTagCount) * 12) : 0;
-                    const bar = '█'.repeat(barLength);
-                    return `   ${num} ${tag.tag.padEnd(10)} ${bar} (${tag.count})`;
-                }).join('\n');
+            const heatChars = ['□','▤','▥','▦','▧','▨','▩','█'];
+            const maxHeat = Math.max(...data.heatmap);
+            const heatmap = data.heatmap.map(count => {
+                if (count === 0) return heatChars[0];
+                const level = Math.min(7, Math.ceil((count / maxHeat) * 7));
+                return heatChars[level];
+            }).join('');
 
-                // Build the beautiful stats display - ORIGINAL ASCII DESIGN
-                const statsHTML = `<pre style="font-family:monospace;color:#333;line-height:1.6;">
+            const maxTagCount = data.top_tags[0]?.count || 0;
+            const tagBars = data.top_tags.map((tag, i) => {
+                const num = ['①','②','③','④','⑤'][i];
+                const barLength = maxTagCount > 0 ? Math.round((tag.count / maxTagCount) * 12) : 0;
+                const bar = '█'.repeat(barLength);
+                return `   ${num} ${tag.tag.padEnd(10)} ${bar} (${tag.count})`;
+            }).join('\n');
+
+            return `<pre style="font-family:monospace;color:#333;line-height:1.6;">
 ╔═══════════════════════════════════════╗
 ║      ▊ Your Thought Patterns          ║
 ╚═══════════════════════════════════════╝
@@ -2270,37 +939,25 @@ ${tagBars || '   No tags yet'}
 <strong>TREND</strong>
    Productivity: ${data.trend} this week
 </pre>`;
-
-                statsContent.innerHTML = statsHTML;
-            } catch (error) {
-                statsContent.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">Failed to load stats</div>';
-                console.error('Failed to load stats:', error);
-            }
         }
 
         function closeStatsModal() {
             const modal = document.getElementById('stats-modal');
             modal.classList.remove('show');
-            input.focus();
+            elements.input.focus();
         }
-
-        // Export modal functions
-        let currentExportFormat = 'markdown';
-        let exportedData = null;
 
         async function showExportModal() {
             const modal = document.getElementById('export-modal');
             modal.classList.add('show');
 
-            // Reset to defaults
             document.getElementById('export-date-range').value = 'all';
             document.getElementById('export-tag-filter').value = '';
             document.getElementById('export-include-timestamps').checked = true;
-            currentExportFormat = 'markdown';
+            state.currentExportFormat = 'markdown';
             document.getElementById('format-markdown').classList.add('active');
             document.getElementById('format-writeas').classList.remove('active');
 
-            // Load initial export
             await updateExport();
         }
 
@@ -2309,11 +966,10 @@ ${tagBars || '   No tags yet'}
             const tagFilter = document.getElementById('export-tag-filter').value;
             const includeTimestamps = document.getElementById('export-include-timestamps').checked;
 
-            // Build query params
             const params = new URLSearchParams({
                 date_range: dateRange,
                 include_timestamps: includeTimestamps,
-                format: currentExportFormat
+                format: state.currentExportFormat
             });
 
             if (tagFilter) {
@@ -2322,42 +978,35 @@ ${tagBars || '   No tags yet'}
 
             const response = await fetch('/export?' + params);
             const data = await response.json();
-            exportedData = data;
 
             const exportContent = document.getElementById('export-content');
             exportContent.value = data.markdown;
 
-            // Update button text based on format
-            const copyBtn = document.getElementById('copy-btn');
-            if (currentExportFormat === 'writeas') {
-                copyBtn.textContent = 'Copy as write.as Draft';
-            } else {
-                copyBtn.textContent = 'Copy to Clipboard';
-            }
+            const copyBtn = document.querySelector('.modal-button.primary');
+            copyBtn.textContent = state.currentExportFormat === 'writeas'
+                ? 'Copy as write.as Draft'
+                : 'Copy to Clipboard';
         }
 
         function setExportFormat(format) {
-            currentExportFormat = format;
+            state.currentExportFormat = format;
 
-            // Update active button
             document.getElementById('format-markdown').classList.toggle('active', format === 'markdown');
             document.getElementById('format-writeas').classList.toggle('active', format === 'writeas');
 
-            // Refresh export with new format
             updateExport();
         }
 
         function closeExportModal() {
             const modal = document.getElementById('export-modal');
             modal.classList.remove('show');
-            input.focus();
+            elements.input.focus();
         }
 
         function copyExportContent() {
             const exportContent = document.getElementById('export-content');
             exportContent.select();
             navigator.clipboard.writeText(exportContent.value).then(() => {
-                // Visual feedback
                 const button = event.target;
                 const originalText = button.textContent;
                 button.textContent = 'Copied!';
@@ -2369,324 +1018,321 @@ ${tagBars || '   No tags yet'}
             });
         }
 
-        // Close modal on Escape key or click outside
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                const statsModal = document.getElementById('stats-modal');
-                if (statsModal && statsModal.classList.contains('show')) {
-                    closeStatsModal();
-                    return;
-                }
+        // ============ Helper Functions ============
 
-                const exportModal = document.getElementById('export-modal');
-                if (exportModal && exportModal.classList.contains('show')) {
-                    closeExportModal();
-                    return;
-                }
-            }
-        });
+        function createTempEntry(content) {
+            const formattedContent = content.replace(/#(\w+)/g, '<a href="#" class="tag" onclick="LeanApp.searchTag(\'#$1\')">#$1</a>');
+            const displayContent = formattedContent.replace(/\n/g, '<br>');
 
-        // Close modal when clicking outside
-        document.getElementById('stats-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeStatsModal();
-            }
-        });
+            const tempEntry = document.createElement('div');
+            tempEntry.className = 'entry new-entry';
+            tempEntry.dataset.tempId = 'temp-' + Date.now();
+            tempEntry.innerHTML = `
+                <div class="entry-content">${displayContent}</div>
+                <div class="entry-meta">◷ just now<span class="success-indicator">✓</span></div>
+            `;
 
-        document.getElementById('export-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeExportModal();
-            }
-        });
-
-
-        // Update todo counter - fetches from database for accurate count
-        async function updateTodoCounter() {
-            const counter = document.getElementById('todo-counter');
-
-            try {
-                // Always fetch todo count from database
-                const response = await fetch('/todo-count');
-                const data = await response.json();
-
-                if (data.count > 0) {
-                    counter.textContent = `□ ${data.count}`;
-                    counter.classList.add('visible');
-                    counter.classList.toggle('has-old', data.has_old);
-                } else {
-                    counter.classList.remove('visible');
-                    todoFilterActive = false;
-                    counter.classList.remove('filtered');
-                }
-            } catch (error) {
-                console.error('Failed to fetch todo count:', error);
-                // Fallback to DOM-based counting if API fails
-                const entries = document.querySelectorAll('.entry[data-id]');
-                let todoCount = 0;
-                let hasOldTodos = false;
-                const now = new Date();
-
-                entries.forEach(entry => {
-                    const content = entry.querySelector('.entry-content').textContent;
-                    if (content.includes('#todo') && !content.includes('#done')) {
-                        todoCount++;
-                        // Check if older than 24 hours
-                        const created = new Date(entry.dataset.created);
-                        if ((now - created) > 24 * 60 * 60 * 1000) {
-                            hasOldTodos = true;
-                        }
-                    }
-                });
-
-                if (todoCount > 0) {
-                    counter.textContent = `□ ${todoCount}`;
-                    counter.classList.add('visible');
-                    counter.classList.toggle('has-old', hasOldTodos);
-                } else {
-                    counter.classList.remove('visible');
-                    todoFilterActive = false;
-                    counter.classList.remove('filtered');
-                }
-            }
+            return tempEntry;
         }
 
-        // Toggle todo filter
-        async function toggleTodoFilter() {
-            const counter = document.getElementById('todo-counter');
-            const entries = document.querySelectorAll('.entry[data-id]');
-
-            // If no entries in DOM (e.g., after /clear), fetch todos from database
-            if (entries.length === 0 && !todoFilterActive) {
-                // Fetch todos from database
-                try {
-                    const response = await fetch('/entries?search=' + encodeURIComponent('#todo'));
-                    const html = await response.text();
-                    entriesContainer.innerHTML = html;
-
-                    // Add indicator that we're showing todos
-                    const indicator = document.createElement('div');
-                    indicator.className = 'search-indicator';
-                    indicator.textContent = 'Showing: todos (press Esc to clear)';
-                    entriesContainer.insertBefore(indicator, entriesContainer.firstChild);
-
-                    todoFilterActive = true;
-                    counter.classList.add('filtered');
-
-                    // Update the counter after fetching
-                    setTimeout(updateTodoCounter, 100);
-                    return;
-                } catch (error) {
-                    console.error('Failed to fetch todos:', error);
-                    return;
-                }
-            }
-
-            // Toggle filter state
-            todoFilterActive = !todoFilterActive;
-
-            // If activating filter and we have entries, filter them
-            if (todoFilterActive) {
-                // Check if we actually have any todos to show
-                let hasTodos = false;
-                entries.forEach(entry => {
-                    const content = entry.querySelector('.entry-content').textContent;
-                    const isTodo = content.includes('#todo') || content.includes('#done');
-
-                    if (isTodo) {
-                        hasTodos = true;
-                        entry.style.display = 'block';
-                    } else {
-                        entry.style.display = 'none';
-                    }
-                });
-
-                // If no todos found in current view, fetch from database
-                if (!hasTodos) {
-                    try {
-                        const response = await fetch('/entries?search=' + encodeURIComponent('#todo'));
-                        const html = await response.text();
-                        entriesContainer.innerHTML = html;
-
-                        // Add indicator
-                        const indicator = document.createElement('div');
-                        indicator.className = 'search-indicator';
-                        indicator.textContent = 'Showing: todos (press Esc to clear)';
-                        entriesContainer.insertBefore(indicator, entriesContainer.firstChild);
-
-                        counter.classList.add('filtered');
-
-                        // Update the counter
-                        setTimeout(updateTodoCounter, 100);
-                    } catch (error) {
-                        console.error('Failed to fetch todos:', error);
-                    }
-                } else {
-                    counter.classList.add('filtered');
-                }
+        function insertEntry(entry) {
+            const indicator = elements.entries.querySelector('.search-indicator');
+            if (indicator) {
+                elements.entries.insertBefore(entry, elements.entries.children[1]);
             } else {
-                // Deactivating filter - show all entries or reload them
-                const hasSearchIndicator = entriesContainer.querySelector('.search-indicator');
-
-                if (hasSearchIndicator) {
-                    // We were showing filtered todos, reload all entries
-                    try {
-                        const response = await fetch('/entries');
-                        const html = await response.text();
-                        entriesContainer.innerHTML = html;
-                    } catch (error) {
-                        console.error('Failed to reload entries:', error);
-                    }
-                } else {
-                    // Just show all existing entries
-                    entries.forEach(entry => {
-                        entry.style.display = 'block';
-                    });
-                }
-
-                counter.classList.remove('filtered');
+                elements.entries.insertBefore(entry, elements.entries.firstChild);
             }
         }
 
-        // Note: toggleTodo function already updates counter, no override needed
-
-        // Setup observer for entry changes
-        const observer = new MutationObserver(() => {
-            updateTodoCounter();
-
-            // Save the timestamp of the most recent entry
-            const firstEntry = entriesContainer.querySelector('.entry[data-id]');
-            if (firstEntry && firstEntry.dataset.created) {
-                localStorage.setItem('lean-last-entry-time', firstEntry.dataset.created);
-            }
-        });
-
-        observer.observe(entriesContainer, {
-            childList: true,
-            subtree: true
-        });
-
-        // Add time divider functionality
-        function insertTimeDivider() {
-            // Get the first entry (most recent)
-            const firstEntry = entriesContainer.querySelector('.entry[data-id]');
-            if (!firstEntry) return; // No entries, no divider
-
-            // Get the timestamp of the most recent entry
-            const createdAt = firstEntry.dataset.created;
-            if (!createdAt) return;
-
-            const entryTime = new Date(createdAt);
-            const now = new Date();
-            const hoursDiff = (now - entryTime) / (1000 * 60 * 60);
-
-            // Only show divider if gap is > 2 hours
-            if (hoursDiff <= 2) return;
-
-            // Format the current time
-            const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
-            const monthDay = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-            const time = now.toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            }).toLowerCase();
-
-            // Create divider text
-            let dividerText;
-            if (hoursDiff > 24) {
-                const daysDiff = Math.floor(hoursDiff / 24);
-                if (daysDiff === 1) {
-                    dividerText = `${dayName}, ${monthDay}, ${time}`;
-                } else {
-                    dividerText = `${dayName}, ${monthDay}, ${time} — ${daysDiff} days later`;
-                }
-            } else {
-                dividerText = `${dayName}, ${monthDay}, ${time}`;
-            }
-
-            // Calculate padding for the lines
-            const textLength = dividerText.length;
-            const totalWidth = 50; // Approximate width in characters
-            const paddingLength = Math.max(3, Math.floor((totalWidth - textLength - 2) / 2));
-            const leftLine = '━'.repeat(paddingLength);
-            const rightLine = '━'.repeat(paddingLength);
-
-            // Create the divider element
-            const divider = document.createElement('div');
-            divider.className = 'time-divider';
-            divider.innerHTML = `${leftLine} ${dividerText} ${rightLine}`;
-
-            // Insert before the first entry
-            entriesContainer.insertBefore(divider, firstEntry);
+        function addSearchIndicator(searchTerm) {
+            const indicator = document.createElement('div');
+            indicator.className = 'search-indicator';
+            indicator.textContent = `Showing: ${searchTerm} (press Esc to clear)`;
+            elements.entries.insertBefore(indicator, elements.entries.firstChild);
         }
 
-        // Insert time divider for clear command (checks last entry time from localStorage)
-        function insertTimeDividerForClear() {
-            // Store the last entry time when entries exist
-            const entries = document.querySelectorAll('.entry[data-id]');
-            if (entries.length > 0) {
-                const lastEntryTime = entries[0].dataset.created;
-                localStorage.setItem('lean-last-entry-time', lastEntryTime);
-            }
-
-            // Get the last entry time from localStorage
-            const lastEntryTime = localStorage.getItem('lean-last-entry-time');
-            if (!lastEntryTime) return; // No previous entries
-
-            const entryTime = new Date(lastEntryTime);
-            const now = new Date();
-            const hoursDiff = (now - entryTime) / (1000 * 60 * 60);
-
-            // Only show divider if gap is > 2 hours
-            if (hoursDiff <= 2) return;
-
-            // Format the current time
-            const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
-            const monthDay = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-            const time = now.toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            }).toLowerCase();
-
-            // Create divider text
-            let dividerText;
-            if (hoursDiff > 24) {
-                const daysDiff = Math.floor(hoursDiff / 24);
-                if (daysDiff === 1) {
-                    dividerText = `${dayName}, ${monthDay}, ${time}`;
-                } else {
-                    dividerText = `${dayName}, ${monthDay}, ${time} — ${daysDiff} days later`;
-                }
-            } else {
-                dividerText = `${dayName}, ${monthDay}, ${time}`;
-            }
-
-            // Calculate padding for the lines
-            const textLength = dividerText.length;
-            const totalWidth = 50; // Approximate width in characters
-            const paddingLength = Math.max(3, Math.floor((totalWidth - textLength - 2) / 2));
-            const leftLine = '━'.repeat(paddingLength);
-            const rightLine = '━'.repeat(paddingLength);
-
-            // Create the divider element
-            const divider = document.createElement('div');
-            divider.className = 'time-divider';
-            divider.innerHTML = `${leftLine} ${dividerText} ${rightLine}`;
-
-            // Insert at the beginning of entries container
-            entriesContainer.insertBefore(divider, entriesContainer.firstChild);
+        function showNotification(message) {
+            const notif = document.createElement('div');
+            notif.className = 'entry';
+            notif.innerHTML = `
+                <div class="entry-content">▪ ${message}</div>
+                <div class="entry-meta">◷ just now</div>
+            `;
+            elements.entries.insertBefore(notif, elements.entries.firstChild);
+            setTimeout(() => notif.remove(), 3000);
         }
 
-        // Focus input and load draft on page load
-        window.addEventListener('load', () => {
-            loadDraft();
-            input.focus();
+        function showHelpTooltip() {
+            const existingHelp = document.querySelector('.help-tooltip');
+            if (existingHelp) existingHelp.remove();
+
+            const helpDiv = document.createElement('div');
+            helpDiv.className = 'help-tooltip';
+            helpDiv.innerHTML = `
+                <h4>Commands</h4>
+                <div class="command"><span class="cmd">◎ /search term</span><span class="desc">Search entries</span></div>
+                <div class="command"><span class="cmd">▦ /today</span><span class="desc">Today's entries</span></div>
+                <div class="command"><span class="cmd">▦ /yesterday</span><span class="desc">Yesterday's entries</span></div>
+                <div class="command"><span class="cmd">▦ /week</span><span class="desc">Last 7 days</span></div>
+                <div class="command"><span class="cmd">≈ /clear</span><span class="desc">Clear view</span></div>
+                <div class="command"><span class="cmd">▤ /export</span><span class="desc">Export as markdown</span></div>
+                <div class="command"><span class="cmd">▊ /stats</span><span class="desc">View statistics</span></div>
+                <div class="command"><span class="cmd">◉ /ai sum [N]</span><span class="desc">AI summary</span></div>
+                <div class="command"><span class="cmd">▨ /theme [name]</span><span class="desc">Change theme</span></div>
+                <div class="command"><span class="cmd">✎ /essay</span><span class="desc">Essay template</span></div>
+                <div class="command"><span class="cmd">💡 /idea</span><span class="desc">Idea template</span></div>
+                <div class="command"><span class="cmd">? /help</span><span class="desc">Show this help</span></div>
+
+                <h4 style="margin-top: 12px;">Todos</h4>
+                <div class="command"><span class="cmd">#todo</span><span class="desc">Creates checkbox</span></div>
+                <div class="command"><span class="cmd">Click □</span><span class="desc">Mark as done</span></div>
+
+                <h4 style="margin-top: 12px;">Keyboard</h4>
+                <div class="command"><span class="cmd">↑</span><span class="desc">Edit last entry</span></div>
+                <div class="command"><span class="cmd">/</span><span class="desc">Focus input</span></div>
+                <div class="command"><span class="cmd">Esc</span><span class="desc">Clear/close</span></div>
+
+                <div style="margin-top: 12px; color: #999; font-size: 11px;">Press Esc to close</div>
+            `;
+            document.body.appendChild(helpDiv);
+
             setTimeout(() => {
-                updateTodoCounter();
-                insertTimeDivider(); // Add time divider on load
-            }, 100);
-        });
+                if (helpDiv.parentNode) helpDiv.remove();
+            }, 10000);
+        }
+
+        function editLastEntry() {
+            const firstEntry = elements.entries.querySelector('.entry[data-id]');
+            if (!firstEntry) return;
+
+            const entryId = firstEntry.dataset.id;
+            const contentDiv = firstEntry.querySelector('.entry-content');
+            if (!contentDiv) return;
+
+            let content = contentDiv.innerHTML
+                .replace(/<br>/g, '\n')
+                .replace(/<a[^>]*class="tag"[^>]*onclick="[^"]*"[^>]*>([^<]+)<\/a>/g, '$1')
+                .replace(/<[^>]+>/g, '');
+
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = content;
+            content = textarea.value;
+
+            elements.input.value = content;
+            state.editingEntryId = entryId;
+            autoResize();
+            updateCharCounter();
+
+            firstEntry.classList.add('editing');
+
+            document.querySelectorAll('.entry.editing').forEach(entry => {
+                if (entry !== firstEntry) entry.classList.remove('editing');
+            });
+        }
+
+        function handleEscapeInInput() {
+            if (elements.input.value) {
+                elements.input.value = '';
+                autoResize();
+                updateCharCounter();
+                state.editingEntryId = null;
+
+                document.querySelectorAll('.entry.editing').forEach(entry => {
+                    entry.classList.remove('editing');
+                });
+            } else {
+                elements.input.blur();
+            }
+        }
+
+        async function handleGlobalEscape() {
+            const helpTooltip = document.querySelector('.help-tooltip');
+            if (helpTooltip) {
+                helpTooltip.remove();
+                elements.input.focus();
+                return;
+            }
+
+            const indicator = document.querySelector('.search-indicator');
+            if (indicator) {
+                const response = await fetch('/entries');
+                const html = await response.text();
+                elements.entries.innerHTML = html;
+
+                state.todoFilterActive = false;
+                elements.todoCounter.classList.remove('filtered');
+
+                elements.input.focus();
+            }
+        }
+
+        function handleModalOutsideClick(e) {
+            if (e.target === e.currentTarget) {
+                if (e.currentTarget.id === 'stats-modal') {
+                    closeStatsModal();
+                } else if (e.currentTarget.id === 'export-modal') {
+                    closeExportModal();
+                }
+            }
+        }
+
+        async function searchTag(tag) {
+            const response = await fetch('/entries?search=' + encodeURIComponent(tag));
+            const html = await response.text();
+            elements.entries.innerHTML = html;
+
+            addSearchIndicator(`Searching for: ${tag}`);
+            elements.input.focus();
+        }
+
+        function showThemeOptions() {
+            const themesDiv = document.createElement('div');
+            themesDiv.className = 'entry';
+            themesDiv.innerHTML = `
+                <div class="entry-content">
+                    <strong>▪ Available themes:</strong><br>
+                    /theme minimal - Clean and minimal (default)<br>
+                    /theme matrix - Green phosphor terminal<br>
+                    /theme paper - Warm paper-like colors<br>
+                    /theme midnight - Deep blues and purples<br>
+                    /theme mono - Pure black and white
+                </div>
+                <div class="entry-meta">◷ just now</div>
+            `;
+            elements.entries.insertBefore(themesDiv, elements.entries.firstChild);
+        }
+
+        function showThemeInfo() {
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'entry';
+            infoDiv.innerHTML = `
+                <div class="entry-content">
+                    <strong>▪ Current theme: ${state.currentTheme}</strong><br><br>
+                    Available themes:<br>
+                    /theme minimal - Clean and minimal (default)<br>
+                    /theme matrix - Green phosphor terminal<br>
+                    /theme paper - Warm paper-like colors<br>
+                    /theme midnight - Deep blues and purples<br>
+                    /theme mono - Pure black and white
+                </div>
+                <div class="entry-meta">◷ just now</div>
+            `;
+            elements.entries.insertBefore(infoDiv, elements.entries.firstChild);
+        }
+
+        function createLoadingEntry(text) {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'entry';
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'entry-content';
+            contentDiv.innerHTML = text + ' ⠋';
+            loadingDiv.appendChild(contentDiv);
+
+            const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+            let i = 0;
+            const interval = setInterval(() => {
+                i = (i + 1) % frames.length;
+                contentDiv.innerHTML = text + ' ' + frames[i];
+            }, 80);
+
+            loadingDiv.dataset.intervalId = interval;
+            return loadingDiv;
+        }
+
+        function createSummaryEntry(data) {
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'entry';
+            summaryDiv.style.background = '#f8f9fa';
+            summaryDiv.innerHTML = `
+                <div class="entry-content">
+                    <strong>◉ AI Summary (${data.count} entries):</strong><br><br>
+                    ${data.summary.replace(/\n/g, '<br>')}
+                </div>
+                <div class="entry-meta">Generated just now</div>
+            `;
+            return summaryDiv;
+        }
+
+        async function fetchAndShowTodos() {
+            try {
+                const response = await fetch('/entries?search=' + encodeURIComponent('#todo'));
+                const html = await response.text();
+                elements.entries.innerHTML = html;
+
+                addSearchIndicator('Showing: todos');
+
+                state.todoFilterActive = true;
+                elements.todoCounter.classList.add('filtered');
+
+                setTimeout(updateTodoCounter, 100);
+            } catch (error) {
+                console.error('Failed to fetch todos:', error);
+            }
+        }
+
+        function filterTodos(entries) {
+            let hasTodos = false;
+            entries.forEach(entry => {
+                const content = entry.querySelector('.entry-content').textContent;
+                const isTodo = content.includes('#todo') || content.includes('#done');
+
+                if (isTodo) {
+                    hasTodos = true;
+                    entry.style.display = 'block';
+                } else {
+                    entry.style.display = 'none';
+                }
+            });
+
+            if (!hasTodos) {
+                fetchAndShowTodos();
+            } else {
+                elements.todoCounter.classList.add('filtered');
+            }
+        }
+
+        function showAllEntries(entries) {
+            const hasSearchIndicator = elements.entries.querySelector('.search-indicator');
+
+            if (hasSearchIndicator) {
+                fetch('/entries')
+                    .then(response => response.text())
+                    .then(html => {
+                        elements.entries.innerHTML = html;
+                    })
+                    .catch(error => console.error('Failed to reload entries:', error));
+            } else {
+                entries.forEach(entry => {
+                    entry.style.display = 'block';
+                });
+            }
+
+            elements.todoCounter.classList.remove('filtered');
+        }
+
+        // ============ Public API ============
+
+        return {
+            init,
+            toggleTodo,
+            toggleTodoFilter,
+            searchTag,
+            showStatsModal,
+            closeStatsModal,
+            showExportModal,
+            closeExportModal,
+            updateExport,
+            setExportFormat,
+            copyExportContent
+        };
+    })();
+
+    // Global functions for onclick handlers
+    window.toggleTodo = LeanApp.toggleTodo;
+    window.searchTag = LeanApp.searchTag;
+
+    // Initialize app when DOM is ready
+    window.addEventListener('load', () => LeanApp.init());
     </script>
 </body>
 </html>

@@ -28,6 +28,9 @@ ENTRIES_DIR.mkdir(exist_ok=True)
 
 templates = Jinja2Templates(directory=str(BASE_DIR))
 
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # Database setup
 def init_db():
     conn = sqlite3.connect(DB_PATH)

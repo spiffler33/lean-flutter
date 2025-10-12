@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Todo Counter Test</title>
+    <style>
+        body {
+            font-family: -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        .step {
+            background: #f9f9f9;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #4CAF50;
+        }
+        .verify {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .fixed {
+            background: #d4edda;
+            border-left: 3px solid #28a745;
+            padding: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-box">
+        <h1>Todo Counter Test - After /clear Fix</h1>
+
+        <h2>🧪 Test Sequence</h2>
+        <p>Open <code>index.html</code> in a browser and follow these steps:</p>
+
+        <div class="step">
+            <strong>Step 1:</strong> Create 3 todo entries
+            <ul>
+                <li>Type: <code>Buy milk #todo</code> → Press Enter</li>
+                <li>Type: <code>Call doctor #todo</code> → Press Enter</li>
+                <li>Type: <code>Review code #todo</code> → Press Enter</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>Step 2:</strong> Verify todo counter shows <code>□ 3</code> in top right corner
+        </div>
+
+        <div class="step">
+            <strong>Step 3:</strong> Type <code>/clear</code> → Press Enter
+            <br>→ Entries disappear, but counter should still show <code>□ 3</code>
+        </div>
+
+        <div class="step">
+            <strong>Step 4:</strong> <span class="verify">CRITICAL TEST</span> - Click the todo counter
+            <br>→ <span class="verify">VERIFY: All 3 todo entries should appear!</span>
+        </div>
+
+        <div class="step">
+            <strong>Step 5:</strong> Press Esc to clear filter
+        </div>
+
+        <div class="step">
+            <strong>Step 6:</strong> Type <code>/clear</code> again → Press Enter
+        </div>
+
+        <div class="step">
+            <strong>Step 7:</strong> <span class="verify">Click todo counter again</span>
+            <br>→ <span class="verify">VERIFY: Todos should appear again!</span>
+        </div>
+
+        <div class="step">
+            <strong>Step 8:</strong> Type <code>/today</code> → Press Enter
+        </div>
+
+        <div class="step">
+            <strong>Step 9:</strong> <span class="verify">Click todo counter</span>
+            <br>→ <span class="verify">VERIFY: Todos should appear!</span>
+        </div>
+
+        <div class="step">
+            <strong>Step 10:</strong> Press Esc to return to normal view
+        </div>
+    </div>
+
+    <div class="test-box">
+        <h2>✅ Expected Behavior</h2>
+        <ul>
+            <li>After <code>/clear</code>, clicking the todo counter fetches todos from database</li>
+            <li>Counter shows as "filtered" (highlighted green) when showing todos</li>
+            <li>Pressing Esc clears the filter and returns to previous view</li>
+            <li>Todo counter is <strong>ALWAYS</strong> clickable and functional</li>
+            <li>Counter always shows the global todo count from database</li>
+        </ul>
+    </div>
+
+    <div class="fixed">
+        <h2>🔧 What Was Fixed</h2>
+        <p><strong>Root Cause:</strong> The <code>toggleTodoFilter()</code> function only filtered existing DOM entries. After <code>/clear</code>, there were no entries in DOM, so clicking did nothing.</p>
+
+        <p><strong>Solution:</strong> Modified <code>toggleTodoFilter()</code> to:</p>
+        <ul>
+            <li>Detect when DOM has no entries (after /clear)</li>
+            <li>Fetch todos directly from database via <code>/entries?search=#todo</code> API</li>
+            <li>Properly manage filter state across different view states</li>
+            <li>Handle toggling between filtered and unfiltered views</li>
+        </ul>
+    </div>
+
+    <div class="test-box">
+        <h2>🎯 Success Criteria</h2>
+        <p>The fix is successful if ALL of these work:</p>
+        <ul>
+            <li>✅ Todo counter click works after /clear</li>
+            <li>✅ Todo counter click works after multiple /clear commands</li>
+            <li>✅ Todo counter click works after /today command</li>
+            <li>✅ Todo counter click works in normal view with entries</li>
+            <li>✅ Esc key properly clears the todo filter</li>
+            <li>✅ Counter visual state (filtered/normal) is correct</li>
+        </ul>
+    </div>
+</body>
+</html>

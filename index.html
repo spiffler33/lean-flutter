@@ -340,6 +340,40 @@
             border: 2px solid #000000;
         }
 
+        /* Time divider styles */
+        .time-divider {
+            text-align: center;
+            color: #999;
+            font-size: 13px;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+            letter-spacing: 1px;
+            padding: 20px 0;
+            opacity: 0.5;
+            user-select: none;
+            animation: fade-in 0.5s ease-out;
+        }
+
+        /* Theme-specific divider styles */
+        body.theme-matrix .time-divider {
+            color: #00ff41;
+            opacity: 0.3;
+        }
+
+        body.theme-paper .time-divider {
+            color: #a0896f;
+            opacity: 0.4;
+        }
+
+        body.theme-midnight .time-divider {
+            color: #8b949e;
+            opacity: 0.4;
+        }
+
+        body.theme-mono .time-divider {
+            color: #000;
+            opacity: 0.3;
+        }
+
         #input-container {
             background: white;
             border-radius: 12px;
@@ -1284,6 +1318,11 @@
             .status-separator {
                 color: #404040;
             }
+
+            .time-divider {
+                color: #71717a;
+                opacity: 0.4;
+            }
         }
     </style>
 </head>
@@ -1659,6 +1698,8 @@
 
                     input.value = '';
                     autoResize();
+                    // Update todo counter to show global count
+                    updateTodoCounter();
                     return;
                 }
 
@@ -1716,10 +1757,27 @@
                 }
 
                 if (content === '/clear') {
-                    // Clear the view
+                    // Clear the view but preserve time divider
+                    // First, preserve any existing time divider
+                    const existingDivider = entriesContainer.querySelector('.time-divider');
+
+                    // Clear all entries
                     entriesContainer.innerHTML = '<div class="no-entries">View cleared. Start typing to add new thoughts!</div>';
+
+                    // Reset todo filter state
+                    todoFilterActive = false;
+                    const counter = document.getElementById('todo-counter');
+                    if (counter) {
+                        counter.classList.remove('filtered');
+                    }
+
+                    // Re-insert time divider if conditions are met
+                    insertTimeDividerForClear();
+
                     input.value = '';
                     autoResize();
+                    // Update todo counter to show global count
+                    updateTodoCounter();
                     return;
                 }
 
@@ -1994,6 +2052,14 @@
                     const response = await fetch('/entries');
                     const html = await response.text();
                     entriesContainer.innerHTML = html;
+
+                    // Reset todo filter state
+                    todoFilterActive = false;
+                    const counter = document.getElementById('todo-counter');
+                    if (counter) {
+                        counter.classList.remove('filtered');
+                    }
+
                     input.focus();
                 }
             }
@@ -2307,55 +2373,151 @@ ${tagBars || '   No tags yet'}
         });
 
 
-        // Update todo counter
-        function updateTodoCounter() {
+        // Update todo counter - fetches from database for accurate count
+        async function updateTodoCounter() {
             const counter = document.getElementById('todo-counter');
-            const entries = document.querySelectorAll('.entry[data-id]');
-            let todoCount = 0;
-            let hasOldTodos = false;
-            const now = new Date();
 
-            entries.forEach(entry => {
-                const content = entry.querySelector('.entry-content').textContent;
-                if (content.includes('#todo') && !content.includes('#done')) {
-                    todoCount++;
-                    // Check if older than 24 hours
-                    const created = new Date(entry.dataset.created);
-                    if ((now - created) > 24 * 60 * 60 * 1000) {
-                        hasOldTodos = true;
-                    }
+            try {
+                // Always fetch todo count from database
+                const response = await fetch('/todo-count');
+                const data = await response.json();
+
+                if (data.count > 0) {
+                    counter.textContent = `□ ${data.count}`;
+                    counter.classList.add('visible');
+                    counter.classList.toggle('has-old', data.has_old);
+                } else {
+                    counter.classList.remove('visible');
+                    todoFilterActive = false;
+                    counter.classList.remove('filtered');
                 }
-            });
+            } catch (error) {
+                console.error('Failed to fetch todo count:', error);
+                // Fallback to DOM-based counting if API fails
+                const entries = document.querySelectorAll('.entry[data-id]');
+                let todoCount = 0;
+                let hasOldTodos = false;
+                const now = new Date();
 
-            if (todoCount > 0) {
-                counter.textContent = `□ ${todoCount}`;
-                counter.classList.add('visible');
-                counter.classList.toggle('has-old', hasOldTodos);
-            } else {
-                counter.classList.remove('visible');
-                todoFilterActive = false;
-                counter.classList.remove('filtered');
+                entries.forEach(entry => {
+                    const content = entry.querySelector('.entry-content').textContent;
+                    if (content.includes('#todo') && !content.includes('#done')) {
+                        todoCount++;
+                        // Check if older than 24 hours
+                        const created = new Date(entry.dataset.created);
+                        if ((now - created) > 24 * 60 * 60 * 1000) {
+                            hasOldTodos = true;
+                        }
+                    }
+                });
+
+                if (todoCount > 0) {
+                    counter.textContent = `□ ${todoCount}`;
+                    counter.classList.add('visible');
+                    counter.classList.toggle('has-old', hasOldTodos);
+                } else {
+                    counter.classList.remove('visible');
+                    todoFilterActive = false;
+                    counter.classList.remove('filtered');
+                }
             }
         }
 
         // Toggle todo filter
-        function toggleTodoFilter() {
-            const entries = document.querySelectorAll('.entry[data-id]');
+        async function toggleTodoFilter() {
             const counter = document.getElementById('todo-counter');
+            const entries = document.querySelectorAll('.entry[data-id]');
+
+            // If no entries in DOM (e.g., after /clear), fetch todos from database
+            if (entries.length === 0 && !todoFilterActive) {
+                // Fetch todos from database
+                try {
+                    const response = await fetch('/entries?search=' + encodeURIComponent('#todo'));
+                    const html = await response.text();
+                    entriesContainer.innerHTML = html;
+
+                    // Add indicator that we're showing todos
+                    const indicator = document.createElement('div');
+                    indicator.className = 'search-indicator';
+                    indicator.textContent = 'Showing: todos (press Esc to clear)';
+                    entriesContainer.insertBefore(indicator, entriesContainer.firstChild);
+
+                    todoFilterActive = true;
+                    counter.classList.add('filtered');
+
+                    // Update the counter after fetching
+                    setTimeout(updateTodoCounter, 100);
+                    return;
+                } catch (error) {
+                    console.error('Failed to fetch todos:', error);
+                    return;
+                }
+            }
+
+            // Toggle filter state
             todoFilterActive = !todoFilterActive;
 
-            entries.forEach(entry => {
-                const content = entry.querySelector('.entry-content').textContent;
-                const isTodo = content.includes('#todo') || content.includes('#done');
+            // If activating filter and we have entries, filter them
+            if (todoFilterActive) {
+                // Check if we actually have any todos to show
+                let hasTodos = false;
+                entries.forEach(entry => {
+                    const content = entry.querySelector('.entry-content').textContent;
+                    const isTodo = content.includes('#todo') || content.includes('#done');
 
-                if (todoFilterActive) {
-                    entry.style.display = isTodo ? 'block' : 'none';
-                    counter.classList.add('filtered');
+                    if (isTodo) {
+                        hasTodos = true;
+                        entry.style.display = 'block';
+                    } else {
+                        entry.style.display = 'none';
+                    }
+                });
+
+                // If no todos found in current view, fetch from database
+                if (!hasTodos) {
+                    try {
+                        const response = await fetch('/entries?search=' + encodeURIComponent('#todo'));
+                        const html = await response.text();
+                        entriesContainer.innerHTML = html;
+
+                        // Add indicator
+                        const indicator = document.createElement('div');
+                        indicator.className = 'search-indicator';
+                        indicator.textContent = 'Showing: todos (press Esc to clear)';
+                        entriesContainer.insertBefore(indicator, entriesContainer.firstChild);
+
+                        counter.classList.add('filtered');
+
+                        // Update the counter
+                        setTimeout(updateTodoCounter, 100);
+                    } catch (error) {
+                        console.error('Failed to fetch todos:', error);
+                    }
                 } else {
-                    entry.style.display = 'block';
-                    counter.classList.remove('filtered');
+                    counter.classList.add('filtered');
                 }
-            });
+            } else {
+                // Deactivating filter - show all entries or reload them
+                const hasSearchIndicator = entriesContainer.querySelector('.search-indicator');
+
+                if (hasSearchIndicator) {
+                    // We were showing filtered todos, reload all entries
+                    try {
+                        const response = await fetch('/entries');
+                        const html = await response.text();
+                        entriesContainer.innerHTML = html;
+                    } catch (error) {
+                        console.error('Failed to reload entries:', error);
+                    }
+                } else {
+                    // Just show all existing entries
+                    entries.forEach(entry => {
+                        entry.style.display = 'block';
+                    });
+                }
+
+                counter.classList.remove('filtered');
+            }
         }
 
         // Note: toggleTodo function already updates counter, no override needed
@@ -2363,6 +2525,12 @@ ${tagBars || '   No tags yet'}
         // Setup observer for entry changes
         const observer = new MutationObserver(() => {
             updateTodoCounter();
+
+            // Save the timestamp of the most recent entry
+            const firstEntry = entriesContainer.querySelector('.entry[data-id]');
+            if (firstEntry && firstEntry.dataset.created) {
+                localStorage.setItem('lean-last-entry-time', firstEntry.dataset.created);
+            }
         });
 
         observer.observe(entriesContainer, {
@@ -2370,11 +2538,127 @@ ${tagBars || '   No tags yet'}
             subtree: true
         });
 
+        // Add time divider functionality
+        function insertTimeDivider() {
+            // Get the first entry (most recent)
+            const firstEntry = entriesContainer.querySelector('.entry[data-id]');
+            if (!firstEntry) return; // No entries, no divider
+
+            // Get the timestamp of the most recent entry
+            const createdAt = firstEntry.dataset.created;
+            if (!createdAt) return;
+
+            const entryTime = new Date(createdAt);
+            const now = new Date();
+            const hoursDiff = (now - entryTime) / (1000 * 60 * 60);
+
+            // Only show divider if gap is > 2 hours
+            if (hoursDiff <= 2) return;
+
+            // Format the current time
+            const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+            const monthDay = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+            const time = now.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            }).toLowerCase();
+
+            // Create divider text
+            let dividerText;
+            if (hoursDiff > 24) {
+                const daysDiff = Math.floor(hoursDiff / 24);
+                if (daysDiff === 1) {
+                    dividerText = `${dayName}, ${monthDay}, ${time}`;
+                } else {
+                    dividerText = `${dayName}, ${monthDay}, ${time} — ${daysDiff} days later`;
+                }
+            } else {
+                dividerText = `${dayName}, ${monthDay}, ${time}`;
+            }
+
+            // Calculate padding for the lines
+            const textLength = dividerText.length;
+            const totalWidth = 50; // Approximate width in characters
+            const paddingLength = Math.max(3, Math.floor((totalWidth - textLength - 2) / 2));
+            const leftLine = '━'.repeat(paddingLength);
+            const rightLine = '━'.repeat(paddingLength);
+
+            // Create the divider element
+            const divider = document.createElement('div');
+            divider.className = 'time-divider';
+            divider.innerHTML = `${leftLine} ${dividerText} ${rightLine}`;
+
+            // Insert before the first entry
+            entriesContainer.insertBefore(divider, firstEntry);
+        }
+
+        // Insert time divider for clear command (checks last entry time from localStorage)
+        function insertTimeDividerForClear() {
+            // Store the last entry time when entries exist
+            const entries = document.querySelectorAll('.entry[data-id]');
+            if (entries.length > 0) {
+                const lastEntryTime = entries[0].dataset.created;
+                localStorage.setItem('lean-last-entry-time', lastEntryTime);
+            }
+
+            // Get the last entry time from localStorage
+            const lastEntryTime = localStorage.getItem('lean-last-entry-time');
+            if (!lastEntryTime) return; // No previous entries
+
+            const entryTime = new Date(lastEntryTime);
+            const now = new Date();
+            const hoursDiff = (now - entryTime) / (1000 * 60 * 60);
+
+            // Only show divider if gap is > 2 hours
+            if (hoursDiff <= 2) return;
+
+            // Format the current time
+            const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+            const monthDay = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+            const time = now.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            }).toLowerCase();
+
+            // Create divider text
+            let dividerText;
+            if (hoursDiff > 24) {
+                const daysDiff = Math.floor(hoursDiff / 24);
+                if (daysDiff === 1) {
+                    dividerText = `${dayName}, ${monthDay}, ${time}`;
+                } else {
+                    dividerText = `${dayName}, ${monthDay}, ${time} — ${daysDiff} days later`;
+                }
+            } else {
+                dividerText = `${dayName}, ${monthDay}, ${time}`;
+            }
+
+            // Calculate padding for the lines
+            const textLength = dividerText.length;
+            const totalWidth = 50; // Approximate width in characters
+            const paddingLength = Math.max(3, Math.floor((totalWidth - textLength - 2) / 2));
+            const leftLine = '━'.repeat(paddingLength);
+            const rightLine = '━'.repeat(paddingLength);
+
+            // Create the divider element
+            const divider = document.createElement('div');
+            divider.className = 'time-divider';
+            divider.innerHTML = `${leftLine} ${dividerText} ${rightLine}`;
+
+            // Insert at the beginning of entries container
+            entriesContainer.insertBefore(divider, entriesContainer.firstChild);
+        }
+
         // Focus input and load draft on page load
         window.addEventListener('load', () => {
             loadDraft();
             input.focus();
-            setTimeout(updateTodoCounter, 100);
+            setTimeout(() => {
+                updateTodoCounter();
+                insertTimeDivider(); // Add time divider on load
+            }, 100);
         });
     </script>
 </body>

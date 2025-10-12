@@ -318,6 +318,38 @@ async def ai_summarize(count: int = Form(20)):
 
     return JSONResponse({"summary": summary, "count": len(entries_list)})
 
+@app.get("/todo-count")
+async def get_todo_count():
+    """Get count of uncompleted todos from database"""
+    conn = get_db()
+    c = conn.cursor()
+
+    # Get all entries with #todo but not #done
+    entries = c.execute("""
+        SELECT id, content, created_at
+        FROM entries
+        WHERE content LIKE '%#todo%'
+        AND content NOT LIKE '%#done%'
+        ORDER BY created_at DESC
+    """).fetchall()
+
+    conn.close()
+
+    # Check for old todos (> 24 hours)
+    has_old_todos = False
+    now = datetime.utcnow()
+
+    for entry in entries:
+        created = datetime.fromisoformat(entry['created_at'])
+        if (now - created).total_seconds() > 24 * 60 * 60:
+            has_old_todos = True
+            break
+
+    return JSONResponse({
+        "count": len(entries),
+        "has_old": has_old_todos
+    })
+
 @app.get("/stats")
 async def get_stats():
     """Get beautiful statistics for modal display"""

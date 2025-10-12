@@ -1310,6 +1310,73 @@ ${tagBars || '   No tags yet'}
             elements.todoCounter.classList.remove('filtered');
         }
 
+        // ============ Edit and Delete Functions ============
+
+        async function editEntry(entryId) {
+            const entry = document.querySelector(`.entry[data-id="${entryId}"]`);
+            if (!entry) return;
+
+            const contentDiv = entry.querySelector('.entry-content');
+            if (!contentDiv) return;
+
+            // Extract plain text from HTML content
+            let content = contentDiv.innerHTML
+                .replace(/<br>/g, '\n')
+                .replace(/<a[^>]*class="tag"[^>]*onclick="[^"]*"[^>]*>([^<]+)<\/a>/g, '$1')
+                .replace(/<span[^>]*class="todo-checkbox"[^>]*>[^<]+<\/span>/g, '') // Remove checkbox
+                .replace(/<span[^>]*class="todo-text"[^>]*>([^<]+)<\/span>/g, '$1') // Extract todo text
+                .replace(/<[^>]+>/g, '');
+
+            // Decode HTML entities
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = content;
+            content = textarea.value.trim();
+
+            // Load into input for editing
+            elements.input.value = content;
+            state.editingEntryId = entryId;
+            autoResize();
+            updateCharCounter();
+
+            // Highlight the entry being edited
+            entry.classList.add('editing');
+
+            // Remove editing class from any other entries
+            document.querySelectorAll('.entry.editing').forEach(e => {
+                if (e !== entry) e.classList.remove('editing');
+            });
+
+            // Focus input
+            elements.input.focus();
+        }
+
+        async function deleteEntry(entryId) {
+            const entry = document.querySelector(`.entry[data-id="${entryId}"]`);
+            if (!entry) return;
+
+            // Simple confirmation
+            if (!confirm('Delete this entry?')) return;
+
+            try {
+                const response = await fetch(`/entries/${entryId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    // Animate out then remove
+                    entry.style.opacity = '0';
+                    entry.style.transform = 'translateX(-20px)';
+                    setTimeout(() => {
+                        entry.remove();
+                        // Update todo counter after deletion
+                        updateTodoCounter();
+                    }, 300);
+                }
+            } catch (error) {
+                console.error('Failed to delete entry:', error);
+            }
+        }
+
         // ============ Public API ============
 
         return {
@@ -1317,6 +1384,8 @@ ${tagBars || '   No tags yet'}
             toggleTodo,
             toggleTodoFilter,
             searchTag,
+            editEntry,
+            deleteEntry,
             showStatsModal,
             closeStatsModal,
             showExportModal,
@@ -1330,6 +1399,8 @@ ${tagBars || '   No tags yet'}
     // Global functions for onclick handlers
     window.toggleTodo = LeanApp.toggleTodo;
     window.searchTag = LeanApp.searchTag;
+    window.editEntry = LeanApp.editEntry;
+    window.deleteEntry = LeanApp.deleteEntry;
 
     // Initialize app when DOM is ready
     window.addEventListener('load', () => LeanApp.init());

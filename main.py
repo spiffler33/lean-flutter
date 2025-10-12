@@ -11,6 +11,7 @@ import json
 import re
 from collections import Counter
 import httpx
+import asyncio
 
 from fastapi import FastAPI, Request, Form, Query
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -132,7 +133,7 @@ async def get_llm_analysis(text: str) -> dict:
     """
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            prompt = f"Extract 1-3 single-word tags and mood (positive/negative/neutral/mixed) from: {text}\nRespond with valid JSON only."
+            prompt = f"Extract 1-3 single-word tags and mood (positive/negative/neutral/mixed) from: {text}\nRespond with valid JSON only with 'tags' array and 'mood' string."
             response = await client.post(
                 "http://localhost:11434/api/generate",
                 json={"model": "llama3.2:3b", "prompt": prompt, "stream": False}
@@ -141,9 +142,25 @@ async def get_llm_analysis(text: str) -> dict:
                 result = response.json()
                 analysis = json.loads(result.get("response", "{}"))
                 return {"tags": analysis.get("tags", [])[:3], "mood": analysis.get("mood", "neutral")}
-    except:
-        pass
+    except Exception as e:
+        print(f"LLM analysis failed: {e}")
     return {"tags": [], "mood": "neutral"}
+
+async def process_entry_with_llm(entry_id: int, content: str):
+    """Background task to add tags and mood to entry."""
+    try:
+        result = await get_llm_analysis(content)
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute(
+            "UPDATE entries SET tags = ?, mood = ? WHERE id = ?",
+            (json.dumps(result["tags"]), result["mood"], entry_id)
+        )
+        conn.commit()
+        conn.close()
+        print(f"LLM processed entry {entry_id}: tags={result['tags']}, mood={result['mood']}")
+    except Exception as e:
+        print(f"LLM processing failed for entry {entry_id}: {e}")
 
 # Routes
 @app.get("/", response_class=HTMLResponse)
@@ -243,6 +260,9 @@ async def create_entry(content: str = Form(...)):
     conn.close()
 
     save_entry_to_markdown(entry_id, content, entry['created_at'])
+
+    # Trigger background LLM processing (non-blocking)
+    asyncio.create_task(process_entry_with_llm(entry_id, content))
 
     # Return HTML
     content_html = format_content_with_tags(content).replace('\n', '<br>')

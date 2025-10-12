@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Time Divider Test</title>
+    <style>
+        body {
+            font-family: -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .step {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border-left: 3px solid #4CAF50;
+        }
+        .code {
+            font-family: monospace;
+            background: #272822;
+            color: #f8f8f2;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .warning {
+            color: #ff9800;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🕐 Time Divider Persistence Test</h1>
+
+    <div class="test-section">
+        <h2>Test Scenario</h2>
+        <p>This test verifies that the time divider (━━━━━ Sunday, December 15, 3:42pm ━━━━━) persists when using the <span class="code">/clear</span> command.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Setup</h2>
+        <div class="step">
+            <strong>Step 1:</strong> The most recent entry has been set to 5 hours ago<br>
+            <small>This ensures the time divider will appear (threshold is 2 hours)</small>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Expected Behavior</h2>
+        <div class="step">
+            <strong>1. Initial Load:</strong><br>
+            ✅ Time divider appears above the entries<br>
+            ✅ Shows current time with proper formatting
+        </div>
+        <div class="step">
+            <strong>2. Type <span class="code">/clear</span>:</strong><br>
+            ✅ All entries disappear<br>
+            ✅ "View cleared" message appears<br>
+            <span class="success">✅ Time divider REMAINS visible</span>
+        </div>
+        <div class="step">
+            <strong>3. Type a new entry:</strong><br>
+            ✅ New entry appears below the time divider<br>
+            ✅ Divider continues to show session context
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Implementation Details</h2>
+        <ul>
+            <li><strong>insertTimeDividerForClear()</strong> - Preserves divider after clear</li>
+            <li>Uses localStorage to remember last entry timestamp</li>
+            <li>Time divider is contextual UI, not an entry</li>
+            <li>Only shows if gap > 2 hours from last activity</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Instructions</h2>
+        <ol>
+            <li>Go to the Lean application (should be open in another tab)</li>
+            <li>Observe the time divider at the top of entries</li>
+            <li>Type <span class="code">/clear</span> and press Enter</li>
+            <li>Verify that the time divider is still visible</li>
+            <li>Type a new thought - it should appear below the divider</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>Edge Cases Handled</h2>
+        <ul>
+            <li>✅ No entries in database - no divider shown</li>
+            <li>✅ Less than 2 hours since last entry - no divider</li>
+            <li>✅ Multiple days gap - shows "X days later"</li>
+            <li>✅ Clear command preserves temporal context</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log("Time Divider Test Page Loaded");
+        console.log("The Lean app should show a time divider if the last entry was > 2 hours ago");
+        console.log("After /clear, the divider should remain visible");
+    </script>
+</body>
+</html>

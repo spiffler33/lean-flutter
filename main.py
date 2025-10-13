@@ -57,6 +57,10 @@ def init_db():
     if 'mood' not in columns:
         c.execute("ALTER TABLE entries ADD COLUMN mood TEXT")
 
+    # Add actions column if it doesn't exist
+    if 'actions' not in columns:
+        c.execute("ALTER TABLE entries ADD COLUMN actions TEXT DEFAULT '[]'")
+
     conn.commit()
     conn.close()
 
@@ -125,18 +129,48 @@ def save_entry_to_markdown(entry_id: int, content: str, created_at: str):
 
 async def get_llm_analysis(text: str) -> dict:
     """
-    Call Ollama API to get tags and mood.
+    Call Ollama API to get tags, mood, and action items.
 
     Args:
         text: The entry text to analyze
 
     Returns:
-        {"tags": ["tag1", "tag2"], "mood": "positive"}
-        On failure: {"tags": [], "mood": "neutral"}
+        {"actions": ["action1"], "tags": ["tag1", "tag2"], "mood": "positive"}
+        On failure: {"actions": [], "tags": [], "mood": "neutral"}
     """
+    # Fallback: extract hashtags directly from text
+    hashtags = [word[1:] for word in text.split() if word.startswith('#') and len(word) > 1]
+
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            prompt = f"Extract 1-3 single-word tags and mood (positive/negative/neutral/mixed) from: {text}\nRespond with valid JSON only with 'tags' array and 'mood' string."
+            prompt = f"""Extract actions, tags, and mood from this text.
+
+Examples:
+Text: "need to call john about the project"
+Output: {{"actions": ["call john about the project"], "tags": [], "mood": "neutral"}}
+
+Text: "feeling tired today #work"
+Output: {{"actions": [], "tags": ["work"], "mood": "negative"}}
+
+Text: "todo: fix css bug and review PR #urgent"
+Output: {{"actions": ["fix css bug", "review PR"], "tags": ["urgent"], "mood": "neutral"}}
+
+Text: "must update documentation before release"
+Output: {{"actions": ["update documentation before release"], "tags": [], "mood": "neutral"}}
+
+Text: "excited about the new feature! #milestone #success"
+Output: {{"actions": [], "tags": ["milestone", "success"], "mood": "positive"}}
+
+Action patterns to look for:
+- "need to..." → extract everything after "need to"
+- "must..." → extract everything after "must"
+- "have to..." → extract everything after "have to"
+- "todo:..." → extract everything after "todo:"
+- "should..." → extract everything after "should"
+
+Now extract from this text:
+Text: "{text}"
+Output:"""
             response = await client.post(
                 "http://localhost:11434/api/generate",
                 json={"model": "llama3.2:3b", "prompt": prompt, "stream": False}
@@ -144,31 +178,124 @@ async def get_llm_analysis(text: str) -> dict:
             if response.status_code == 200:
                 result = response.json()
                 raw_response = result.get("response", "{}")
-                print(f"DEBUG - Ollama raw response: {raw_response}")
+                print(f"DEBUG - Ollama raw response: {raw_response[:500]}")
+
+                analysis = {}
                 try:
-                    analysis = json.loads(raw_response)
-                except json.JSONDecodeError as e:
+                    # Try multiple extraction patterns
+                    # 1. Try to extract from markdown code blocks
+                    import re
+                    json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw_response, re.DOTALL)
+                    if json_match:
+                        analysis = json.loads(json_match.group(1))
+                    else:
+                        # 2. Try to extract raw JSON object
+                        json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', raw_response)
+                        if json_match:
+                            analysis = json.loads(json_match.group())
+                        else:
+                            # 3. Try direct parse as last resort
+                            analysis = json.loads(raw_response)
+
+                    print(f"DEBUG - Extracted JSON: {analysis}")
+                except (json.JSONDecodeError, AttributeError) as e:
                     print(f"DEBUG - JSON parse failed: {e}")
-                    print(f"DEBUG - Raw text was: {raw_response[:200]}")
                     analysis = {}
-                return {"tags": analysis.get("tags", [])[:3], "mood": analysis.get("mood", "neutral")}
+
+                # Merge LLM tags with hashtag extraction, prioritize LLM if available
+                llm_tags = analysis.get("tags", [])
+                if llm_tags:
+                    final_tags = llm_tags[:3]
+                else:
+                    final_tags = hashtags[:3]
+
+                # Get actions from LLM
+                actions = analysis.get("actions", [])
+
+                # Manual action extraction fallback if LLM didn't find any
+                if not actions or len(actions) == 0:
+                    import re
+                    # Split text into sentences/phrases for better processing
+                    text_lower = text.lower()
+
+                    # Pattern 1: "need to" variations
+                    if 'need to ' in text_lower or 'needs to ' in text_lower:
+                        match = re.search(r'(?:need|needs)\s+to\s+(.+?)(?:\.|$)', text, re.IGNORECASE)
+                        if match:
+                            action = match.group(1).strip().rstrip('#').strip()
+                            if action and len(action) > 3:
+                                actions.append(action)
+
+                    # Pattern 2: "must" variations
+                    if 'must ' in text_lower:
+                        match = re.search(r'must\s+(.+?)(?:\.|$)', text, re.IGNORECASE)
+                        if match:
+                            action = match.group(1).strip().rstrip('#').strip()
+                            if action and len(action) > 3 and action not in actions:
+                                actions.append(action)
+
+                    # Pattern 3: "have to" / "has to"
+                    if 'have to ' in text_lower or 'has to ' in text_lower:
+                        match = re.search(r'(?:have|has)\s+to\s+(.+?)(?:\.|$)', text, re.IGNORECASE)
+                        if match:
+                            action = match.group(1).strip().rstrip('#').strip()
+                            if action and len(action) > 3 and action not in actions:
+                                actions.append(action)
+
+                    # Pattern 4: "todo:" variations
+                    if 'todo:' in text_lower or 'todo ' in text_lower:
+                        # First try with colon
+                        match = re.search(r'todo:\s*(.+?)(?:\.|$)', text, re.IGNORECASE)
+                        if match:
+                            # Handle multiple actions separated by "and" or commas
+                            action_text = match.group(1).strip().rstrip('#').strip()
+                            if ' and ' in action_text:
+                                for part in action_text.split(' and '):
+                                    part = part.strip()
+                                    if part and len(part) > 3 and part not in actions:
+                                        actions.append(part)
+                            else:
+                                if action_text and len(action_text) > 3 and action_text not in actions:
+                                    actions.append(action_text)
+
+                    # Pattern 5: "should" variations
+                    if 'should ' in text_lower or 'ought to ' in text_lower:
+                        match = re.search(r'(?:should|ought\s+to)\s+(.+?)(?:\.|$)', text, re.IGNORECASE)
+                        if match:
+                            action = match.group(1).strip().rstrip('#').strip()
+                            if action and len(action) > 3 and action not in actions:
+                                actions.append(action)
+
+                    # Remove duplicates while preserving order
+                    actions = list(dict.fromkeys(actions[:5]))  # Max 5 actions
+
+                    if actions:
+                        print(f"Fallback extracted actions: {actions}")
+
+                return {
+                    "actions": actions,
+                    "tags": final_tags,
+                    "mood": analysis.get("mood", "neutral")
+                }
     except Exception as e:
         print(f"LLM analysis failed: {e}")
-    return {"tags": [], "mood": "neutral"}
+
+    # Return fallback with at least hashtags extracted
+    return {"actions": [], "tags": hashtags[:3], "mood": "neutral"}
 
 async def process_entry_with_llm(entry_id: int, content: str):
-    """Background task to add tags and mood to entry."""
+    """Background task to add tags, mood, and actions to entry."""
     try:
         result = await get_llm_analysis(content)
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute(
-            "UPDATE entries SET tags = ?, mood = ? WHERE id = ?",
-            (json.dumps(result["tags"]), result["mood"], entry_id)
+            "UPDATE entries SET tags = ?, mood = ?, actions = ? WHERE id = ?",
+            (json.dumps(result["tags"]), result["mood"], json.dumps(result["actions"]), entry_id)
         )
         conn.commit()
         conn.close()
-        print(f"LLM processed entry {entry_id}: tags={result['tags']}, mood={result['mood']}")
+        print(f"LLM processed entry {entry_id}: actions={result['actions']}, tags={result['tags']}, mood={result['mood']}")
     except Exception as e:
         print(f"LLM processing failed for entry {entry_id}: {e}")
 
@@ -217,10 +344,15 @@ async def get_entries(search: Optional[str] = None):
                 if tag_list and len(tag_list) > 0:
                     slm_indicators += f'<span class="slm-indicator">[#{len(tag_list)}]</span>'
             except: pass
-        if 'mood' in entry.keys() and entry['mood'] and entry['mood'] != 'neutral':
-            mood_text = {'positive': '+', 'negative': '-', 'mixed': '~'}.get(entry['mood'], '')
-            if mood_text:
-                slm_indicators += f'<span class="slm-indicator">[{mood_text}]</span>'
+        if 'mood' in entry.keys() and entry['mood']:
+            mood_text = {'positive': '+', 'negative': '-', 'neutral': '~', 'mixed': '~'}.get(entry['mood'], '~')
+            slm_indicators += f'<span class="slm-indicator">[{mood_text}]</span>'
+        if 'actions' in entry.keys() and entry['actions']:
+            try:
+                action_list = json.loads(entry['actions']) if isinstance(entry['actions'], str) else entry['actions']
+                if action_list and len(action_list) > 0:
+                    slm_indicators += f'<span class="slm-indicator">[!{len(action_list)}]</span>'
+            except: pass
 
         # Check if it's a todo
         is_todo = '#todo' in entry['content'].lower()

@@ -871,4 +871,11 @@ body.theme-mono .todo-checkbox {
         color: #71717a;
         opacity: 0.4;
     }
+
+    .slm-indicator {
+        float: right;
+        opacity: 0.5;
+        font-size: 0.85em;
+        margin-left: 8px;
+    }
 }

@@ -21,6 +21,9 @@ from fastapi.templating import Jinja2Templates
 # Import AI features
 from ai import summarize_entries
 
+# Global set to keep background tasks alive
+background_tasks = set()
+
 # Setup
 app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent
@@ -140,7 +143,14 @@ async def get_llm_analysis(text: str) -> dict:
             )
             if response.status_code == 200:
                 result = response.json()
-                analysis = json.loads(result.get("response", "{}"))
+                raw_response = result.get("response", "{}")
+                print(f"DEBUG - Ollama raw response: {raw_response}")
+                try:
+                    analysis = json.loads(raw_response)
+                except json.JSONDecodeError as e:
+                    print(f"DEBUG - JSON parse failed: {e}")
+                    print(f"DEBUG - Raw text was: {raw_response[:200]}")
+                    analysis = {}
                 return {"tags": analysis.get("tags", [])[:3], "mood": analysis.get("mood", "neutral")}
     except Exception as e:
         print(f"LLM analysis failed: {e}")
@@ -199,6 +209,19 @@ async def get_entries(search: Optional[str] = None):
         content_html = format_content_with_tags(entry['content']).replace('\n', '<br>')
         relative_time = get_relative_time(entry['created_at'])
 
+        # Build SLM indicators
+        slm_indicators = ""
+        if entry['tags']:
+            try:
+                tag_list = json.loads(entry['tags']) if isinstance(entry['tags'], str) else entry['tags']
+                if tag_list and len(tag_list) > 0:
+                    slm_indicators += f'<span class="slm-indicator">[#{len(tag_list)}]</span>'
+            except: pass
+        if 'mood' in entry.keys() and entry['mood'] and entry['mood'] != 'neutral':
+            mood_text = {'positive': '+', 'negative': '-', 'mixed': '~'}.get(entry['mood'], '')
+            if mood_text:
+                slm_indicators += f'<span class="slm-indicator">[{mood_text}]</span>'
+
         # Check if it's a todo
         is_todo = '#todo' in entry['content'].lower()
         is_done = '#done' in entry['content'].lower()
@@ -215,7 +238,7 @@ async def get_entries(search: Optional[str] = None):
                     <button class="entry-action delete" onclick="deleteEntry({entry['id']})" title="Delete">×</button>
                 </div>
                 <div class="entry-content">{todo_content}</div>
-                <div class="entry-meta">{relative_time}</div>
+                <div class="entry-meta">{relative_time}{slm_indicators}</div>
             </div>
             """
         else:
@@ -226,7 +249,7 @@ async def get_entries(search: Optional[str] = None):
                     <button class="entry-action delete" onclick="deleteEntry({entry['id']})" title="Delete">×</button>
                 </div>
                 <div class="entry-content">{content_html}</div>
-                <div class="entry-meta">{relative_time}</div>
+                <div class="entry-meta">{relative_time}{slm_indicators}</div>
             </div>
             """
 
@@ -262,7 +285,10 @@ async def create_entry(content: str = Form(...)):
     save_entry_to_markdown(entry_id, content, entry['created_at'])
 
     # Trigger background LLM processing (non-blocking)
-    asyncio.create_task(process_entry_with_llm(entry_id, content))
+    # Store task reference to prevent garbage collection
+    task = asyncio.create_task(process_entry_with_llm(entry_id, content))
+    background_tasks.add(task)
+    task.add_done_callback(background_tasks.discard)
 
     # Return HTML
     content_html = format_content_with_tags(content).replace('\n', '<br>')

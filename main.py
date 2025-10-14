@@ -436,7 +436,8 @@ async def create_entry(content: str = Form(...)):
         # Format content with checkbox inline
         todo_content = f'<span class="todo-checkbox" onclick="toggleTodo({entry_id})">{checkbox}</span><span class="todo-text">{content_html}</span>'
         return f"""
-        <div class="entry new-entry {todo_class}" data-id="{entry_id}" data-created="{entry['created_at']}">
+        <div class="entry new-entry {todo_class}" data-id="{entry_id}" data-created="{entry['created_at']}"
+             hx-get="/entries/{entry_id}/refresh" hx-trigger="every 3s" hx-swap="outerHTML">
             <div class="entry-actions">
                 <button class="entry-action edit" onclick="editEntry({entry_id})" title="Edit">✎</button>
                 <button class="entry-action delete" onclick="deleteEntry({entry_id})" title="Delete">×</button>
@@ -447,7 +448,8 @@ async def create_entry(content: str = Form(...)):
         """
     else:
         return f"""
-        <div class="entry new-entry" data-id="{entry_id}" data-created="{entry['created_at']}">
+        <div class="entry new-entry" data-id="{entry_id}" data-created="{entry['created_at']}"
+             hx-get="/entries/{entry_id}/refresh" hx-trigger="every 3s" hx-swap="outerHTML">
             <div class="entry-actions">
                 <button class="entry-action edit" onclick="editEntry({entry_id})" title="Edit">✎</button>
                 <button class="entry-action delete" onclick="deleteEntry({entry_id})" title="Delete">×</button>
@@ -477,6 +479,24 @@ async def update_entry(entry_id: int, content: str = Form(...)):
     content_html = format_content_with_tags(content).replace('\n', '<br>')
     relative_time = get_relative_time(entry['created_at'])
 
+    # Build SLM indicators (same as in get_entries)
+    slm_indicators = ""
+    if entry['tags']:
+        try:
+            tag_list = json.loads(entry['tags']) if isinstance(entry['tags'], str) else entry['tags']
+            if tag_list and len(tag_list) > 0:
+                slm_indicators += f'<span class="slm-indicator">[#{len(tag_list)}]</span>'
+        except: pass
+    if 'mood' in entry.keys() and entry['mood']:
+        mood_text = {'positive': '+', 'negative': '-', 'neutral': '~', 'mixed': '~'}.get(entry['mood'], '~')
+        slm_indicators += f'<span class="slm-indicator">[{mood_text}]</span>'
+    if 'actions' in entry.keys() and entry['actions']:
+        try:
+            action_list = json.loads(entry['actions']) if isinstance(entry['actions'], str) else entry['actions']
+            if action_list and len(action_list) > 0:
+                slm_indicators += f'<span class="slm-indicator">[!{len(action_list)}]</span>'
+        except: pass
+
     # Check if it's a todo
     is_todo = '#todo' in content.lower()
     is_done = '#done' in content.lower()
@@ -493,7 +513,7 @@ async def update_entry(entry_id: int, content: str = Form(...)):
                 <button class="entry-action delete" onclick="deleteEntry({entry_id})" title="Delete">×</button>
             </div>
             <div class="entry-content">{todo_content}</div>
-            <div class="entry-meta">{relative_time}<span class="success-indicator">✓</span></div>
+            <div class="entry-meta">{relative_time}{slm_indicators}<span class="success-indicator">✓</span></div>
         </div>
         """
     else:
@@ -504,7 +524,87 @@ async def update_entry(entry_id: int, content: str = Form(...)):
                 <button class="entry-action delete" onclick="deleteEntry({entry_id})" title="Delete">×</button>
             </div>
             <div class="entry-content">{content_html}</div>
-            <div class="entry-meta">{relative_time}<span class="success-indicator">✓</span></div>
+            <div class="entry-meta">{relative_time}{slm_indicators}<span class="success-indicator">✓</span></div>
+        </div>
+        """
+
+@app.get("/entries/{entry_id}/refresh", response_class=HTMLResponse)
+async def refresh_entry(entry_id: int):
+    """Refresh entry with updated LLM indicators - used for polling"""
+    conn = get_db()
+    c = conn.cursor()
+    entry = c.execute("SELECT * FROM entries WHERE id = ?", (entry_id,)).fetchone()
+    conn.close()
+
+    if not entry:
+        return ""
+
+    # Check if entry is older than 2 minutes
+    created_dt = datetime.fromisoformat(entry['created_at'])
+    age_seconds = (datetime.utcnow() - created_dt).total_seconds()
+    is_old = age_seconds > 120  # 2 minutes
+
+    # Check if entry has indicators (LLM processing complete)
+    has_indicators = False
+    if ('mood' in entry.keys() and entry['mood']) or \
+       ('actions' in entry.keys() and entry['actions'] and json.loads(entry['actions'] or '[]')) or \
+       ('tags' in entry.keys() and entry['tags'] and json.loads(entry['tags'] or '[]')):
+        has_indicators = True
+
+    # Stop polling if entry is old OR has indicators
+    should_stop_polling = is_old or has_indicators
+
+    content_html = format_content_with_tags(entry['content']).replace('\n', '<br>')
+    relative_time = get_relative_time(entry['created_at'])
+
+    # Build SLM indicators
+    slm_indicators = ""
+    if entry['tags']:
+        try:
+            tag_list = json.loads(entry['tags']) if isinstance(entry['tags'], str) else entry['tags']
+            if tag_list and len(tag_list) > 0:
+                slm_indicators += f'<span class="slm-indicator">[#{len(tag_list)}]</span>'
+        except: pass
+    if 'mood' in entry.keys() and entry['mood']:
+        mood_text = {'positive': '+', 'negative': '-', 'neutral': '~', 'mixed': '~'}.get(entry['mood'], '~')
+        slm_indicators += f'<span class="slm-indicator">[{mood_text}]</span>'
+    if 'actions' in entry.keys() and entry['actions']:
+        try:
+            action_list = json.loads(entry['actions']) if isinstance(entry['actions'], str) else entry['actions']
+            if action_list and len(action_list) > 0:
+                slm_indicators += f'<span class="slm-indicator">[!{len(action_list)}]</span>'
+        except: pass
+
+    # Check if it's a todo
+    is_todo = '#todo' in entry['content'].lower()
+    is_done = '#done' in entry['content'].lower()
+
+    # Add polling attributes only if we should keep polling
+    polling_attrs = '' if should_stop_polling else f'hx-get="/entries/{entry_id}/refresh" hx-trigger="every 3s" hx-swap="outerHTML"'
+
+    if is_todo or is_done:
+        checkbox = '☑' if is_done else '□'
+        todo_class = 'todo-done' if is_done else ''
+        todo_content = f'<span class="todo-checkbox" onclick="toggleTodo({entry_id})">{checkbox}</span><span class="todo-text">{content_html}</span>'
+        return f"""
+        <div class="entry {todo_class}" data-id="{entry_id}" data-created="{entry['created_at']}" {polling_attrs}>
+            <div class="entry-actions">
+                <button class="entry-action edit" onclick="editEntry({entry_id})" title="Edit">✎</button>
+                <button class="entry-action delete" onclick="deleteEntry({entry_id})" title="Delete">×</button>
+            </div>
+            <div class="entry-content">{todo_content}</div>
+            <div class="entry-meta">{relative_time}{slm_indicators}</div>
+        </div>
+        """
+    else:
+        return f"""
+        <div class="entry" data-id="{entry_id}" data-created="{entry['created_at']}" {polling_attrs}>
+            <div class="entry-actions">
+                <button class="entry-action edit" onclick="editEntry({entry_id})" title="Edit">✎</button>
+                <button class="entry-action delete" onclick="deleteEntry({entry_id})" title="Delete">×</button>
+            </div>
+            <div class="entry-content">{content_html}</div>
+            <div class="entry-meta">{relative_time}{slm_indicators}</div>
         </div>
         """
 

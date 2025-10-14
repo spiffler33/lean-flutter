@@ -4,6 +4,14 @@ from main import get_llm_analysis
 async def test():
     print("Testing get_llm_analysis function...")
 
+    # Valid emotions from Stage 1 implementation
+    valid_emotions = [
+        'frustrated', 'anxious', 'excited', 'content', 'melancholic',
+        'hopeful', 'angry', 'contemplative', 'tired', 'energetic',
+        'confused', 'grateful', 'overwhelmed', 'calm', 'nostalgic',
+        'curious', 'determined', 'focused', 'scattered', 'neutral'
+    ]
+
     # Test 1: Basic call (Ollama running)
     result = await get_llm_analysis("I'm happy about the progress")
     print(f"Test 1 (with Ollama): {result}")
@@ -11,8 +19,8 @@ async def test():
     assert "tags" in result
     assert "mood" in result
     assert isinstance(result["tags"], list)
-    assert result["mood"] in ["positive", "negative", "neutral", "mixed"]
-    print("✓ Test 1 passed: Returns valid structure")
+    assert result["mood"] in valid_emotions, f"Got mood '{result['mood']}' which is not in valid emotions"
+    print(f"✓ Test 1 passed: Returns valid structure with emotion '{result['mood']}'")
 
     # Test 2: Empty text
     result = await get_llm_analysis("")
@@ -33,6 +41,7 @@ async def test():
     print("✓ Test 3 passed: Handles long text and limits tags to 3")
 
     print("\n✅ All tests passed! Function works correctly.")
-    print("Note: If Ollama is not running, function returns {'tags': [], 'mood': 'neutral'}")
+    print("Note: Stage 1 returns specific emotions instead of positive/negative/neutral")
+    print("Valid emotions: frustrated, anxious, excited, content, melancholic, hopeful, angry, etc.")
 
 asyncio.run(test())

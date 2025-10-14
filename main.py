@@ -53,13 +53,29 @@ def init_db():
     c.execute("PRAGMA table_info(entries)")
     columns = [col[1] for col in c.fetchall()]
 
-    # Add mood column if it doesn't exist
+    # Add mood column if it doesn't exist (legacy - kept for backwards compatibility)
     if 'mood' not in columns:
         c.execute("ALTER TABLE entries ADD COLUMN mood TEXT")
 
     # Add actions column if it doesn't exist
     if 'actions' not in columns:
         c.execute("ALTER TABLE entries ADD COLUMN actions TEXT DEFAULT '[]'")
+
+    # Stage 2: Add new rich extraction columns
+    if 'emotion' not in columns:
+        c.execute("ALTER TABLE entries ADD COLUMN emotion TEXT")
+        # Migrate existing mood data to emotion column
+        c.execute("UPDATE entries SET emotion = mood WHERE mood IS NOT NULL")
+        print("Migrated existing mood data to emotion column")
+
+    if 'themes' not in columns:
+        c.execute("ALTER TABLE entries ADD COLUMN themes TEXT DEFAULT '[]'")
+
+    if 'people' not in columns:
+        c.execute("ALTER TABLE entries ADD COLUMN people TEXT DEFAULT '[]'")
+
+    if 'urgency' not in columns:
+        c.execute("ALTER TABLE entries ADD COLUMN urgency TEXT DEFAULT 'none'")
 
     conn.commit()
     conn.close()
@@ -127,15 +143,214 @@ def save_entry_to_markdown(entry_id: int, content: str, created_at: str):
     with open(filename, 'a') as f:
         f.write(f"## {time_str}\n\n{content}\n\n---\n\n")
 
+def detect_emotion_fallback(text: str) -> str:
+    """
+    Fallback emotion detection using keyword mapping.
+    Returns one emotion word from the emotion vocabulary.
+    """
+    text_lower = text.lower()
+
+    # Emotion keyword mapping
+    emotion_map = {
+        'frustrated': ['frustrated', 'frustrating', 'annoyed', 'annoying'],
+        'anxious': ['anxious', 'worried', 'nervous', 'stress', 'stressed'],
+        'excited': ['excited', 'exciting', 'thrilled', 'pumped'],
+        'content': ['content', 'satisfied', 'happy', 'good'],
+        'melancholic': ['melancholic', 'sad', 'down', 'blue'],
+        'hopeful': ['hopeful', 'optimistic', 'positive'],
+        'angry': ['angry', 'mad', 'furious', 'pissed', 'hate', 'hating', 'hatred', 'horrible'],
+        'contemplative': ['contemplative', 'thinking', 'wondering', 'pondering'],
+        'tired': ['tired', 'exhausted', 'drained', 'worn out'],
+        'energetic': ['energetic', 'energized', 'pumped up', 'motivated'],
+        'confused': ['confused', 'puzzled', 'unclear', 'lost'],
+        'grateful': ['grateful', 'thankful', 'blessed', 'appreciative'],
+        'overwhelmed': ['overwhelmed', 'swamped', 'drowning', 'too much'],
+        'calm': ['calm', 'peaceful', 'relaxed', 'serene'],
+        'nostalgic': ['nostalgic', 'remember', 'miss', 'old days'],
+        'curious': ['curious', 'interested', 'intrigued'],
+        'determined': ['determined', 'focused', 'driven', 'committed'],
+        'scattered': ['scattered', 'unfocused', 'distracted', 'all over']
+    }
+
+    # Check for emotion keywords
+    for emotion, keywords in emotion_map.items():
+        for keyword in keywords:
+            if keyword in text_lower:
+                return emotion
+
+    return 'neutral'
+
+def extract_themes_fallback(text: str) -> List[str]:
+    """Fallback theme detection using keyword mapping."""
+    text_lower = text.lower()
+    themes = []
+
+    theme_keywords = {
+        'work': ['meeting', 'project', 'deadline', 'boss', 'colleague', 'office', 'work', 'client'],
+        'health': ['exercise', 'sick', 'doctor', 'workout', 'gym', 'tired', 'pain', 'medical'],
+        'relationships': ['friend', 'family', 'wife', 'husband', 'partner', 'mom', 'dad', 'dinner'],
+        'tech': ['coding', 'bug', 'server', 'deploy', 'git', 'database', 'api', 'code'],
+        'finance': ['money', 'budget', 'expense', 'bill', 'payment', 'salary', 'invoice'],
+        'learning': ['study', 'learn', 'course', 'tutorial', 'book', 'reading', 'research'],
+        'creative': ['write', 'design', 'art', 'music', 'paint', 'create', 'idea'],
+        'leisure': ['movie', 'game', 'relax', 'fun', 'vacation', 'hobby', 'weekend']
+    }
+
+    for theme, keywords in theme_keywords.items():
+        for keyword in keywords:
+            if keyword in text_lower:
+                if theme not in themes:
+                    themes.append(theme)
+                break
+        if len(themes) >= 3:
+            break
+
+    return themes[:3]
+
+async def extract_themes(text: str) -> List[str]:
+    """Extract 1-3 themes from taxonomy using LLM with fallback."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            prompt = f"""Identify 1-3 themes from this list: work, personal, health, finance, relationships, learning, daily, creative, tech, leisure.
+
+Text: "{text}"
+
+Return ONLY a JSON array like: ["work", "health"]"""
+
+            response = await client.post(
+                "http://localhost:11434/api/generate",
+                json={"model": "llama3.2:3b", "prompt": prompt, "stream": False}
+            )
+            if response.status_code == 200:
+                result = response.json()
+                raw_response = result.get("response", "[]")
+
+                # Extract JSON array
+                import re
+                json_match = re.search(r'\[.*?\]', raw_response)
+                if json_match:
+                    themes = json.loads(json_match.group())
+                    return themes[:3] if isinstance(themes, list) else []
+    except Exception as e:
+        print(f"Theme extraction failed: {e}")
+
+    return extract_themes_fallback(text)
+
+def extract_people_fallback(text: str) -> List[str]:
+    """Fallback people extraction using regex."""
+    # Find capitalized words not at sentence start
+    words = text.split()
+    people = []
+
+    # Common words to filter out
+    exclude = {'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+               'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+               'September', 'October', 'November', 'December', 'I', 'The', 'A', 'An'}
+
+    for i, word in enumerate(words):
+        # Clean punctuation
+        clean_word = word.strip('.,!?;:').strip()
+        # Check if capitalized and not sentence start (unless first word)
+        if clean_word and clean_word[0].isupper() and len(clean_word) > 1:
+            if i == 0 or (i > 0 and words[i-1][-1] not in '.!?'):
+                if clean_word not in exclude and clean_word.lower() not in text.lower()[:i]:
+                    if clean_word not in people:
+                        people.append(clean_word)
+
+    return people[:5]
+
+async def extract_people(text: str) -> List[str]:
+    """Extract mentioned people's names using LLM with fallback."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            prompt = f"""Extract people's names mentioned in this text.
+
+Text: "{text}"
+
+Return ONLY a JSON array of names like: ["Sarah", "John"]"""
+
+            response = await client.post(
+                "http://localhost:11434/api/generate",
+                json={"model": "llama3.2:3b", "prompt": prompt, "stream": False}
+            )
+            if response.status_code == 200:
+                result = response.json()
+                raw_response = result.get("response", "[]")
+
+                # Extract JSON array
+                import re
+                json_match = re.search(r'\[.*?\]', raw_response)
+                if json_match:
+                    people = json.loads(json_match.group())
+                    return people[:5] if isinstance(people, list) else []
+    except Exception as e:
+        print(f"People extraction failed: {e}")
+
+    return extract_people_fallback(text)
+
+def extract_urgency_fallback(text: str) -> str:
+    """Fallback urgency detection using keyword mapping."""
+    text_lower = text.lower()
+
+    high_keywords = ['asap', 'urgent', 'immediately', 'now', 'critical', 'emergency']
+    medium_keywords = ['today', 'tomorrow', 'soon', 'deadline', 'this week']
+    low_keywords = ['someday', 'eventually', 'maybe', 'later', 'sometime']
+
+    for keyword in high_keywords:
+        if keyword in text_lower:
+            return 'high'
+
+    for keyword in medium_keywords:
+        if keyword in text_lower:
+            return 'medium'
+
+    for keyword in low_keywords:
+        if keyword in text_lower:
+            return 'low'
+
+    return 'none'
+
+async def extract_urgency(text: str) -> str:
+    """Extract urgency level using LLM with fallback."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            prompt = f"""Rate urgency as one word: none, low, medium, or high.
+
+Text: "{text}"
+
+Return ONLY one word."""
+
+            response = await client.post(
+                "http://localhost:11434/api/generate",
+                json={"model": "llama3.2:3b", "prompt": prompt, "stream": False}
+            )
+            if response.status_code == 200:
+                result = response.json()
+                raw_response = result.get("response", "none").strip().lower()
+
+                # Extract urgency level
+                if 'high' in raw_response:
+                    return 'high'
+                elif 'medium' in raw_response:
+                    return 'medium'
+                elif 'low' in raw_response:
+                    return 'low'
+                elif 'none' in raw_response:
+                    return 'none'
+    except Exception as e:
+        print(f"Urgency extraction failed: {e}")
+
+    return extract_urgency_fallback(text)
+
 async def get_llm_analysis(text: str) -> dict:
     """
-    Call Ollama API to get tags, mood, and action items.
+    Call Ollama API to get tags, mood (as specific emotion), and action items.
 
     Args:
         text: The entry text to analyze
 
     Returns:
-        {"actions": ["action1"], "tags": ["tag1", "tag2"], "mood": "positive"}
+        {"actions": ["action1"], "tags": ["tag1", "tag2"], "mood": "anxious"}
         On failure: {"actions": [], "tags": [], "mood": "neutral"}
     """
     # Fallback: extract hashtags directly from text
@@ -143,32 +358,26 @@ async def get_llm_analysis(text: str) -> dict:
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            prompt = f"""Extract actions, tags, and mood from this text.
+            prompt = f"""Extract actions, tags, and emotion from this text. Return ONE emotion word only.
+
+IMPORTANT: Only extract #hashtags for tags (words starting with #). Do NOT extract regular words as tags.
+
+Emotion vocabulary: frustrated, anxious, excited, content, melancholic, hopeful, angry, contemplative, tired, energetic, confused, grateful, overwhelmed, calm, nostalgic, curious, determined, focused, scattered, neutral
 
 Examples:
-Text: "need to call john about the project"
-Output: {{"actions": ["call john about the project"], "tags": [], "mood": "neutral"}}
+Text: "feeling anxious about tomorrow's presentation"
+Output: {{"actions": [], "tags": [], "mood": "anxious"}}
 
-Text: "feeling tired today #work"
-Output: {{"actions": [], "tags": ["work"], "mood": "negative"}}
+Text: "I love this!"
+Output: {{"actions": [], "tags": [], "mood": "excited"}}
 
-Text: "todo: fix css bug and review PR #urgent"
-Output: {{"actions": ["fix css bug", "review PR"], "tags": ["urgent"], "mood": "neutral"}}
+Text: "I hate this!"
+Output: {{"actions": [], "tags": [], "mood": "angry"}}
 
-Text: "must update documentation before release"
-Output: {{"actions": ["update documentation before release"], "tags": [], "mood": "neutral"}}
+Text: "totally scattered today #work"
+Output: {{"actions": [], "tags": ["work"], "mood": "scattered"}}
 
-Text: "excited about the new feature! #milestone #success"
-Output: {{"actions": [], "tags": ["milestone", "success"], "mood": "positive"}}
-
-Action patterns to look for:
-- "need to..." → extract everything after "need to"
-- "must..." → extract everything after "must"
-- "have to..." → extract everything after "have to"
-- "todo:..." → extract everything after "todo:"
-- "should..." → extract everything after "should"
-
-Now extract from this text:
+Now extract from:
 Text: "{text}"
 Output:"""
             response = await client.post(
@@ -202,10 +411,12 @@ Output:"""
                     print(f"DEBUG - JSON parse failed: {e}")
                     analysis = {}
 
-                # Merge LLM tags with hashtag extraction, prioritize LLM if available
+                # Merge LLM tags with hashtag extraction, validate tags are real hashtags
                 llm_tags = analysis.get("tags", [])
-                if llm_tags:
-                    final_tags = llm_tags[:3]
+                # Filter LLM tags to only include words that exist as hashtags in original text
+                valid_llm_tags = [tag for tag in llm_tags if tag in hashtags or f"#{tag}" in text]
+                if valid_llm_tags:
+                    final_tags = valid_llm_tags[:3]
                 else:
                     final_tags = hashtags[:3]
 
@@ -272,30 +483,58 @@ Output:"""
                     if actions:
                         print(f"Fallback extracted actions: {actions}")
 
+                # Get emotion, use fallback if invalid
+                llm_mood = analysis.get("mood", "")
+                valid_emotions = [
+                    'frustrated', 'anxious', 'excited', 'content', 'melancholic',
+                    'hopeful', 'angry', 'contemplative', 'tired', 'energetic',
+                    'confused', 'grateful', 'overwhelmed', 'calm', 'nostalgic',
+                    'curious', 'determined', 'focused', 'scattered', 'neutral'
+                ]
+                if llm_mood not in valid_emotions:
+                    llm_mood = detect_emotion_fallback(text)
+
                 return {
                     "actions": actions,
                     "tags": final_tags,
-                    "mood": analysis.get("mood", "neutral")
+                    "mood": llm_mood
                 }
     except Exception as e:
         print(f"LLM analysis failed: {e}")
 
-    # Return fallback with at least hashtags extracted
-    return {"actions": [], "tags": hashtags[:3], "mood": "neutral"}
+    # Return fallback with emotion detection and hashtags extracted
+    return {"actions": [], "tags": hashtags[:3], "mood": detect_emotion_fallback(text)}
 
 async def process_entry_with_llm(entry_id: int, content: str):
-    """Background task to add tags, mood, and actions to entry."""
+    """Background task to add tags, emotion, actions, themes, people, urgency to entry."""
     try:
-        result = await get_llm_analysis(content)
+        # Stage 3: Run all extractors in parallel using asyncio.gather
+        results = await asyncio.gather(
+            get_llm_analysis(content),
+            extract_themes(content),
+            extract_people(content),
+            extract_urgency(content),
+            return_exceptions=True  # Don't fail if one extractor fails
+        )
+
+        # Unpack results with error handling
+        base_result = results[0] if not isinstance(results[0], Exception) else {"tags": [], "mood": "neutral", "actions": []}
+        themes = results[1] if not isinstance(results[1], Exception) else []
+        people = results[2] if not isinstance(results[2], Exception) else []
+        urgency = results[3] if not isinstance(results[3], Exception) else 'none'
+
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
+        # Update with all Stage 3 extracted data
         c.execute(
-            "UPDATE entries SET tags = ?, mood = ?, actions = ? WHERE id = ?",
-            (json.dumps(result["tags"]), result["mood"], json.dumps(result["actions"]), entry_id)
+            """UPDATE entries SET tags = ?, mood = ?, emotion = ?, actions = ?,
+               themes = ?, people = ?, urgency = ? WHERE id = ?""",
+            (json.dumps(base_result["tags"]), base_result["mood"], base_result["mood"],
+             json.dumps(base_result["actions"]), json.dumps(themes), json.dumps(people), urgency, entry_id)
         )
         conn.commit()
         conn.close()
-        print(f"LLM processed entry {entry_id}: actions={result['actions']}, tags={result['tags']}, mood={result['mood']}")
+        print(f"LLM processed entry {entry_id}: emotion={base_result['mood']}, themes={themes}, people={people}, urgency={urgency}")
     except Exception as e:
         print(f"LLM processing failed for entry {entry_id}: {e}")
 
@@ -336,17 +575,29 @@ async def get_entries(search: Optional[str] = None):
         content_html = format_content_with_tags(entry['content']).replace('\n', '<br>')
         relative_time = get_relative_time(entry['created_at'])
 
-        # Build SLM indicators
+        # Build SLM indicators - Stage 3: show emotion, themes, people, urgency
         slm_indicators = ""
-        if entry['tags']:
-            try:
-                tag_list = json.loads(entry['tags']) if isinstance(entry['tags'], str) else entry['tags']
-                if tag_list and len(tag_list) > 0:
-                    slm_indicators += f'<span class="slm-indicator">[#{len(tag_list)}]</span>'
-            except: pass
+        # Emotion
         if 'mood' in entry.keys() and entry['mood']:
-            mood_text = {'positive': '+', 'negative': '-', 'neutral': '~', 'mixed': '~'}.get(entry['mood'], '~')
-            slm_indicators += f'<span class="slm-indicator">[{mood_text}]</span>'
+            slm_indicators += f'<span class="slm-indicator">[{entry["mood"]}]</span>'
+        # Themes
+        if 'themes' in entry.keys() and entry['themes']:
+            try:
+                theme_list = json.loads(entry['themes']) if isinstance(entry['themes'], str) else entry['themes']
+                for theme in theme_list[:2]:  # Show max 2 themes
+                    slm_indicators += f'<span class="slm-indicator">[#{theme}]</span>'
+            except: pass
+        # People
+        if 'people' in entry.keys() and entry['people']:
+            try:
+                people_list = json.loads(entry['people']) if isinstance(entry['people'], str) else entry['people']
+                for person in people_list[:2]:  # Show max 2 people
+                    slm_indicators += f'<span class="slm-indicator">[@{person}]</span>'
+            except: pass
+        # Urgency (only show medium/high)
+        if 'urgency' in entry.keys() and entry['urgency'] in ['medium', 'high']:
+            slm_indicators += f'<span class="slm-indicator">[!{entry["urgency"]}]</span>'
+        # Actions count (legacy)
         if 'actions' in entry.keys() and entry['actions']:
             try:
                 action_list = json.loads(entry['actions']) if isinstance(entry['actions'], str) else entry['actions']
@@ -479,17 +730,24 @@ async def update_entry(entry_id: int, content: str = Form(...)):
     content_html = format_content_with_tags(content).replace('\n', '<br>')
     relative_time = get_relative_time(entry['created_at'])
 
-    # Build SLM indicators (same as in get_entries)
+    # Build SLM indicators - Stage 3 (same as in get_entries)
     slm_indicators = ""
-    if entry['tags']:
-        try:
-            tag_list = json.loads(entry['tags']) if isinstance(entry['tags'], str) else entry['tags']
-            if tag_list and len(tag_list) > 0:
-                slm_indicators += f'<span class="slm-indicator">[#{len(tag_list)}]</span>'
-        except: pass
     if 'mood' in entry.keys() and entry['mood']:
-        mood_text = {'positive': '+', 'negative': '-', 'neutral': '~', 'mixed': '~'}.get(entry['mood'], '~')
-        slm_indicators += f'<span class="slm-indicator">[{mood_text}]</span>'
+        slm_indicators += f'<span class="slm-indicator">[{entry["mood"]}]</span>'
+    if 'themes' in entry.keys() and entry['themes']:
+        try:
+            theme_list = json.loads(entry['themes']) if isinstance(entry['themes'], str) else entry['themes']
+            for theme in theme_list[:2]:
+                slm_indicators += f'<span class="slm-indicator">[#{theme}]</span>'
+        except: pass
+    if 'people' in entry.keys() and entry['people']:
+        try:
+            people_list = json.loads(entry['people']) if isinstance(entry['people'], str) else entry['people']
+            for person in people_list[:2]:
+                slm_indicators += f'<span class="slm-indicator">[@{person}]</span>'
+        except: pass
+    if 'urgency' in entry.keys() and entry['urgency'] in ['medium', 'high']:
+        slm_indicators += f'<span class="slm-indicator">[!{entry["urgency"]}]</span>'
     if 'actions' in entry.keys() and entry['actions']:
         try:
             action_list = json.loads(entry['actions']) if isinstance(entry['actions'], str) else entry['actions']
@@ -557,17 +815,24 @@ async def refresh_entry(entry_id: int):
     content_html = format_content_with_tags(entry['content']).replace('\n', '<br>')
     relative_time = get_relative_time(entry['created_at'])
 
-    # Build SLM indicators
+    # Build SLM indicators - Stage 3
     slm_indicators = ""
-    if entry['tags']:
-        try:
-            tag_list = json.loads(entry['tags']) if isinstance(entry['tags'], str) else entry['tags']
-            if tag_list and len(tag_list) > 0:
-                slm_indicators += f'<span class="slm-indicator">[#{len(tag_list)}]</span>'
-        except: pass
     if 'mood' in entry.keys() and entry['mood']:
-        mood_text = {'positive': '+', 'negative': '-', 'neutral': '~', 'mixed': '~'}.get(entry['mood'], '~')
-        slm_indicators += f'<span class="slm-indicator">[{mood_text}]</span>'
+        slm_indicators += f'<span class="slm-indicator">[{entry["mood"]}]</span>'
+    if 'themes' in entry.keys() and entry['themes']:
+        try:
+            theme_list = json.loads(entry['themes']) if isinstance(entry['themes'], str) else entry['themes']
+            for theme in theme_list[:2]:
+                slm_indicators += f'<span class="slm-indicator">[#{theme}]</span>'
+        except: pass
+    if 'people' in entry.keys() and entry['people']:
+        try:
+            people_list = json.loads(entry['people']) if isinstance(entry['people'], str) else entry['people']
+            for person in people_list[:2]:
+                slm_indicators += f'<span class="slm-indicator">[@{person}]</span>'
+        except: pass
+    if 'urgency' in entry.keys() and entry['urgency'] in ['medium', 'high']:
+        slm_indicators += f'<span class="slm-indicator">[!{entry["urgency"]}]</span>'
     if 'actions' in entry.keys() and entry['actions']:
         try:
             action_list = json.loads(entry['actions']) if isinstance(entry['actions'], str) else entry['actions']

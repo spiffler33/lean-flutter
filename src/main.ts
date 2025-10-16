@@ -153,14 +153,14 @@ const LeanApp = (function() {
     elements.authButton.addEventListener('click', handleAuthButtonClick);
     elements.syncIndicator.addEventListener('click', handleSyncClick);
 
-    // Check current user
+    // Check current user (don't call startAutoSync here - onAuthStateChange will handle it)
     const user = await getCurrentUser();
     if (user) {
       elements.authButton.textContent = user.email?.split('@')[0] || 'Account';
       elements.syncIndicator.classList.remove('offline');
       elements.syncIndicator.classList.add('synced');
       elements.syncIndicator.textContent = '●';
-      startAutoSync();
+      // startAutoSync() will be called by onAuthStateChange callback
     }
   }
 

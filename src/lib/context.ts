@@ -149,7 +149,7 @@ export async function getContextString(): Promise<string> {
 
     // Build context string
     const contextParts: string[] = [];
-    for (const [category, items] of Object.entries(categorized)) {
+    for (const [_category, items] of Object.entries(categorized)) {
       if (items.length > 0) {
         contextParts.push(...items);
       }

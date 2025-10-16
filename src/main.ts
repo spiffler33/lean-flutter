@@ -21,7 +21,7 @@ import {
 } from './lib/utils';
 import { getCurrentUser, signIn, signUp, signOut, onAuthStateChange, resetPassword } from './lib/auth';
 import { sync, startAutoSync, stopAutoSync, isSyncing } from './lib/sync';
-import { enrichEntry, isAIAvailable } from './lib/ai';
+import { enrichEntry } from './lib/ai';
 import { getUserFacts, addFact, removeFact, clearAllFacts, getContextString } from './lib/context';
 import { getPatternInsights, formatEntityPattern, formatTemporalPattern } from './lib/patterns';
 

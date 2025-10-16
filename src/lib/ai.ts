@@ -296,7 +296,7 @@ Respond with ONLY valid JSON in this exact format:
           ? result.emotion
           : detectEmotionFallback(content),
         themes: Array.isArray(result.themes)
-          ? result.themes.filter(t => THEME_TAXONOMY.includes(t)).slice(0, 3)
+          ? result.themes.filter((t: string) => THEME_TAXONOMY.includes(t)).slice(0, 3)
           : extractThemesFallback(content),
         people: Array.isArray(result.people)
           ? result.people.slice(0, 5)

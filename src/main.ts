@@ -808,6 +808,12 @@ Next step: [Action]
   // ============ Entry Operations ============
 
   async function createEntry(content: string) {
+    // Remove any existing time divider (user is writing, session continues)
+    const existingDivider = document.querySelector('.time-divider');
+    if (existingDivider) {
+      existingDivider.remove();
+    }
+
     // Visual feedback
     elements.input.classList.add('saving');
     setTimeout(() => elements.input.classList.remove('saving'), 300);

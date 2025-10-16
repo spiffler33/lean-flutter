@@ -78,7 +78,6 @@ const LeanApp = (function() {
     '/theme': { handler: 'handleTheme', needsParam: false },
     '/context': { handler: 'handleContext', needsParam: false },
     '/patterns': { handler: 'handlePatterns' },
-    '/test-divider': { handler: 'handleTestDivider' },
   };
 
   // ============ Core Functions ============
@@ -793,16 +792,6 @@ Next step: [Action]
 
       clearInput();
     },
-
-    handleTestDivider() {
-      // Set localStorage to 3 hours ago to test divider
-      const threeHoursAgo = new Date();
-      threeHoursAgo.setHours(threeHoursAgo.getHours() - 3);
-      localStorage.setItem('lean-last-entry-time', threeHoursAgo.toISOString());
-
-      showNotification('Set last entry to 3 hours ago. Refresh page to see divider!');
-      clearInput();
-    },
   };
 
   // ============ Entry Operations ============
@@ -1045,54 +1034,32 @@ Next step: [Action]
 
   const TimeDivider = {
     insert() {
-      // Check last entry time from localStorage (set by MutationObserver)
-      // This represents when you LAST wrote something before this page load
-      const lastEntryTime = localStorage.getItem('lean-last-entry-time');
-      console.log('TimeDivider.insert() - lastEntryTime from localStorage:', lastEntryTime);
-
-      if (!lastEntryTime) {
-        console.log('No last entry time found, skipping divider');
-        return;
-      }
-
-      const entryTime = new Date(lastEntryTime);
-      const now = new Date();
-      const hoursDiff = (now.getTime() - entryTime.getTime()) / (1000 * 60 * 60);
-
-      console.log(`Hours since last entry: ${hoursDiff.toFixed(1)}`);
-
-      if (hoursDiff <= 2) {
-        console.log('Less than 2 hours since last session, no divider needed');
-        return;
-      }
-
-      console.log('Inserting time divider for new session!');
-
-      // Insert divider at the top, before first entry
+      // ALWAYS insert divider on page load - it indicates "page was refreshed"
+      // Gets removed when user writes a new entry
       const firstEntry = elements.entries.querySelector<HTMLElement>('.entry[data-id]');
-      if (firstEntry) {
-        const dividerText = this.formatDividerText(now, hoursDiff);
-        const divider = this.createDividerElement(dividerText);
-        elements.entries.insertBefore(divider, firstEntry);
+
+      if (!firstEntry) {
+        console.log('No entries found, skipping divider');
+        return;
       }
+
+      const now = new Date();
+      const dividerText = this.formatDividerText(now);
+      const divider = this.createDividerElement(dividerText);
+      elements.entries.insertBefore(divider, firstEntry);
+
+      console.log('Inserted page refresh divider');
     },
 
     insertForClear() {
-      const lastEntryTime = localStorage.getItem('lean-last-entry-time');
-      if (!lastEntryTime) return;
-
-      const entryTime = new Date(lastEntryTime);
+      // Insert divider on /clear command
       const now = new Date();
-      const hoursDiff = (now.getTime() - entryTime.getTime()) / (1000 * 60 * 60);
-
-      if (hoursDiff <= 2) return;
-
-      const dividerText = this.formatDividerText(now, hoursDiff);
+      const dividerText = this.formatDividerText(now);
       const divider = this.createDividerElement(dividerText);
       elements.entries.insertBefore(divider, elements.entries.firstChild);
     },
 
-    formatDividerText(now: Date, hoursDiff: number): string {
+    formatDividerText(now: Date): string {
       const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
       const monthDay = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
       const time = now.toLocaleTimeString('en-US', {
@@ -1100,13 +1067,6 @@ Next step: [Action]
         minute: '2-digit',
         hour12: true
       }).toLowerCase();
-
-      if (hoursDiff > 24) {
-        const daysDiff = Math.floor(hoursDiff / 24);
-        return daysDiff === 1
-          ? `${dayName}, ${monthDay}, ${time}`
-          : `${dayName}, ${monthDay}, ${time} — ${daysDiff} days later`;
-      }
 
       return `${dayName}, ${monthDay}, ${time}`;
     },

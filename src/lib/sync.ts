@@ -209,27 +209,36 @@ export async function sync(): Promise<SyncResult> {
 }
 
 /**
- * Start automatic sync (every 5 minutes)
+ * Start automatic sync (every 10 seconds for near-instant sync)
  */
-export function startAutoSync(intervalMs: number = 5 * 60 * 1000) {
+export function startAutoSync(intervalMs: number = 10 * 1000) {
   if (syncState.autoSyncInterval) {
     stopAutoSync();
   }
+
+  console.log(`🔄 Starting auto-sync (every ${intervalMs / 1000}s)`);
 
   syncState.autoSyncInterval = setInterval(async () => {
     try {
       const user = await getCurrentUser();
       if (user) {
-        await sync();
-        console.log('Auto-sync completed');
+        const result = await sync();
+        if (result.pulled > 0 || result.pushed > 0) {
+          console.log(`🔄 Auto-sync: ${result.pushed} up ↑, ${result.pulled} down ↓`);
+        }
       }
     } catch (error) {
       console.error('Auto-sync failed:', error);
     }
   }, intervalMs);
 
-  // Do an initial sync
-  sync().catch(error => console.error('Initial sync failed:', error));
+  // Do an initial sync immediately
+  console.log('🔄 Initial sync starting...');
+  sync()
+    .then(result => {
+      console.log(`✅ Initial sync complete: ${result.pushed} up ↑, ${result.pulled} down ↓`);
+    })
+    .catch(error => console.error('❌ Initial sync failed:', error));
 }
 
 /**

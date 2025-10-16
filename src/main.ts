@@ -386,6 +386,16 @@ const LeanApp = (function() {
     const exportModal = document.getElementById('export-modal');
     if (statsModal) statsModal.addEventListener('click', handleModalOutsideClick);
     if (exportModal) exportModal.addEventListener('click', handleModalOutsideClick);
+
+    // Reload entries when tab becomes visible (for background sync)
+    document.addEventListener('visibilitychange', async () => {
+      if (!document.hidden) {
+        console.log('Tab visible - reloading entries...');
+        await loadEntries();
+        updateTodoCounter();
+        setTimeout(() => TimeDivider.insert(), 100);
+      }
+    });
   }
 
   function setupObservers() {

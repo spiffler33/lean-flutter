@@ -35,10 +35,13 @@ lean.db
 # Virtual environments
 bin/
 include/
-lib/
 lib64/
 share/
 pyvenv.cfg
+
+# Node modules
+node_modules/
+dist/
 
 # Personal entries (keep these private)
 entries/

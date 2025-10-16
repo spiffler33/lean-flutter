@@ -23,6 +23,7 @@ import { getCurrentUser, signIn, signUp, signOut, onAuthStateChange, resetPasswo
 import { sync, startAutoSync, stopAutoSync, isSyncing } from './lib/sync';
 import { enrichEntry, isAIAvailable } from './lib/ai';
 import { getUserFacts, addFact, removeFact, clearAllFacts, getContextString } from './lib/context';
+import { getPatternInsights, formatEntityPattern, formatTemporalPattern } from './lib/patterns';
 
 // Lean App - Complete implementation
 const LeanApp = (function() {
@@ -732,7 +733,48 @@ Next step: [Action]
     },
 
     async handlePatterns() {
-      showNotification('/patterns command coming soon - will show AI-learned insights about your writing');
+      const user = await getCurrentUser();
+      if (!user) {
+        showNotification('Sign in to use /patterns');
+        showAuthModal();
+        clearInput();
+        return;
+      }
+
+      try {
+        const { entities, temporal, summary } = await getPatternInsights();
+
+        // Build HTML display
+        let html = '<div class="entry"><div class="entry-content"><strong>AI-Learned Patterns:</strong><br><br>';
+
+        html += `<em>${summary}</em><br><br>`;
+
+        if (entities.length > 0) {
+          html += '<strong>People & Entities:</strong><br>';
+          entities.forEach(entity => {
+            html += formatEntityPattern(entity).replace(/\n/g, '<br>') + '<br>';
+          });
+          html += '<br>';
+        }
+
+        if (temporal.length > 0) {
+          html += '<strong>Writing Rhythms:</strong><br>';
+          temporal.forEach(pattern => {
+            html += formatTemporalPattern(pattern).replace(/\n/g, '<br>') + '<br>';
+          });
+        }
+
+        html += '</div></div>';
+
+        elements.entries.insertBefore(
+          createHTMLElement(html),
+          elements.entries.firstChild
+        );
+      } catch (error: any) {
+        console.error('Patterns command error:', error);
+        showNotification(error.message || 'Failed to load patterns');
+      }
+
       clearInput();
     },
   };
@@ -769,6 +811,36 @@ Next step: [Action]
         insertEntry(realEntry);
       }
     }, 500);
+
+    // Background enrichment (async, don't block UI)
+    if (entry && entry.id) {
+      performEnrichment(entry.id, content).catch(err => {
+        console.error('Enrichment failed:', err);
+      });
+    }
+  }
+
+  async function performEnrichment(entryId: string, content: string) {
+    try {
+      // Get user context for AI prompting
+      const userContext = await getContextString();
+
+      // Call Claude API for enrichment
+      const enrichment = await enrichEntry(content, userContext);
+
+      // Update entry with enrichment results
+      await updateEntry(entryId, {
+        mood: enrichment.emotion,
+        themes: enrichment.themes,
+        people: enrichment.people,
+        actions: enrichment.actions,
+        urgency: enrichment.urgency,
+      });
+
+      console.log(`Enriched entry ${entryId}:`, enrichment);
+    } catch (error) {
+      console.error('Failed to enrich entry:', error);
+    }
   }
 
   async function saveEdit(entryId: string, content: string) {

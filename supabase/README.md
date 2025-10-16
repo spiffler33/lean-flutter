@@ -10,6 +10,7 @@
    - Copy and paste the contents of `migrations/001_initial_schema.sql`
    - Click "Run" (or press Cmd/Ctrl + Enter)
    - Repeat for `migrations/002_sync_functions.sql`
+   - Repeat for `migrations/003_ai_enrichment_tables.sql` (AI features)
 
 3. **Verify**:
    - Go to "Table Editor" - you should see the `entries` table
@@ -20,6 +21,9 @@
 ### Tables
 - `entries` - Main entries table with RLS enabled
 - `user_stats` - View for quick stats queries
+- `user_facts` - User context facts for /context command (AI enrichment)
+- `entity_patterns` - Learned patterns about people/entities (AI tracking)
+- `temporal_patterns` - Writing rhythm patterns by time/day (AI insights)
 
 ### Functions
 - `get_entries_since(timestamp)` - Get all entries modified since a timestamp

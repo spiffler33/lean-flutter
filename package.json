@@ -9,10 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "dexie": "^3.2.4",
+    "@anthropic-ai/sdk": "^0.66.0",
     "@supabase/supabase-js": "^2.39.0",
-    "marked": "^11.1.1",
-    "date-fns": "^3.0.6"
+    "date-fns": "^3.0.6",
+    "dexie": "^3.2.4",
+    "marked": "^11.1.1"
   },
   "devDependencies": {
     "typescript": "^5.3.3",

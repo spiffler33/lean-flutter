@@ -21,6 +21,8 @@ import {
 } from './lib/utils';
 import { getCurrentUser, signIn, signUp, signOut, onAuthStateChange, resetPassword } from './lib/auth';
 import { sync, startAutoSync, stopAutoSync, isSyncing } from './lib/sync';
+import { enrichEntry, isAIAvailable } from './lib/ai';
+import { getUserFacts, addFact, removeFact, clearAllFacts, getContextString } from './lib/context';
 
 // Lean App - Complete implementation
 const LeanApp = (function() {
@@ -73,6 +75,8 @@ const LeanApp = (function() {
     '/essay': { handler: 'handleEssay' },
     '/idea': { handler: 'handleIdea' },
     '/theme': { handler: 'handleTheme', needsParam: false },
+    '/context': { handler: 'handleContext', needsParam: false },
+    '/patterns': { handler: 'handlePatterns' },
   };
 
   // ============ Core Functions ============
@@ -648,6 +652,87 @@ Next step: [Action]
       } else {
         showThemeInfo();
       }
+      clearInput();
+    },
+
+    async handleContext(content: string) {
+      const user = await getCurrentUser();
+      if (!user) {
+        showNotification('Sign in to use /context');
+        showAuthModal();
+        clearInput();
+        return;
+      }
+
+      const parts = content.trim().split(' ');
+      const subcommand = parts[1];
+
+      try {
+        if (content === '/context') {
+          // Display all facts
+          const facts = await getUserFacts();
+
+          if (facts.length === 0) {
+            showNotification('No context facts yet. Use /context [text] to add facts.');
+            clearInput();
+            return;
+          }
+
+          // Group by category
+          const categorized: Record<string, typeof facts> = {
+            work: [],
+            personal: [],
+            people: [],
+            location: [],
+            other: [],
+          };
+
+          facts.forEach(fact => {
+            const category = fact.fact_category || 'other';
+            categorized[category].push(fact);
+          });
+
+          // Build HTML
+          let html = '<div class="entry"><div class="entry-content"><strong>Your Context Facts:</strong><br><br>';
+          for (const [category, items] of Object.entries(categorized)) {
+            if (items.length > 0) {
+              html += `<strong>${category.charAt(0).toUpperCase() + category.slice(1)}:</strong><br>`;
+              for (const fact of items) {
+                html += `[${fact.fact_id.substring(0, 8)}] ${fact.fact_text}<br>`;
+              }
+              html += '<br>';
+            }
+          }
+          html += '<em>Use /context remove [id] to delete a fact</em></div></div>';
+
+          elements.entries.insertBefore(
+            createHTMLElement(html),
+            elements.entries.firstChild
+          );
+        } else if (subcommand === 'clear') {
+          // Clear all facts
+          await clearAllFacts();
+          showNotification('All context facts cleared.');
+        } else if (subcommand === 'remove' && parts[2]) {
+          // Remove specific fact
+          await removeFact(parts[2]);
+          showNotification(`Removed fact.`);
+        } else if (content.startsWith('/context ')) {
+          // Add new fact
+          const factText = content.substring(9).trim();
+          const fact = await addFact(factText);
+          showNotification(`Added to context (${fact.fact_category}): ${factText}`);
+        }
+      } catch (error: any) {
+        console.error('Context command error:', error);
+        showNotification(error.message || 'Failed to process context command');
+      }
+
+      clearInput();
+    },
+
+    async handlePatterns() {
+      showNotification('/patterns command coming soon - will show AI-learned insights about your writing');
       clearInput();
     },
   };
@@ -1327,6 +1412,12 @@ ${tagBars || '   No tags yet'}
     `;
     elements.entries.insertBefore(notif, elements.entries.firstChild);
     setTimeout(() => notif.remove(), 3000);
+  }
+
+  function createHTMLElement(html: string): HTMLElement {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    return temp.firstElementChild as HTMLElement;
   }
 
   function showHelpTooltip() {

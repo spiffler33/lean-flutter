@@ -99,3 +99,44 @@ export interface EnrichmentResult {
   themes: string[];
   urgency: 'none' | 'low' | 'medium' | 'high';
 }
+
+// User Facts (for /context command)
+export interface UserFact {
+  fact_id: string;
+  user_id: string;
+  fact_text: string;
+  fact_category: 'work' | 'personal' | 'people' | 'location' | 'other';
+  active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// Entity Patterns (people tracking)
+export interface EntityPattern {
+  entity_id: string;
+  user_id: string;
+  entity: string;
+  entity_type: string;
+  mention_count: number;
+  theme_correlations: Record<string, number>;
+  emotion_correlations: Record<string, number>;
+  urgency_correlations: Record<string, number>;
+  time_patterns: Record<string, number>;
+  confidence_score: number;
+  first_seen: Date;
+  last_seen: Date;
+}
+
+// Temporal Patterns (writing rhythms)
+export interface TemporalPattern {
+  pattern_id: string;
+  user_id: string;
+  time_block: 'morning' | 'afternoon' | 'evening' | 'night' | 'all';
+  weekday: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday' | 'weekday' | 'weekend' | 'all';
+  common_themes: string[];
+  common_emotions: string[];
+  sample_count: number;
+  confidence: number;
+  created_at: Date;
+  updated_at: Date;
+}

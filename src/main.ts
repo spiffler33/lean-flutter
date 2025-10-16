@@ -390,8 +390,13 @@ const LeanApp = (function() {
     // Reload entries when tab becomes visible (for background sync)
     document.addEventListener('visibilitychange', async () => {
       if (!document.hidden) {
-        console.log('Tab visible - reloading entries...');
-        await loadEntries();
+        console.log('Tab visible - forcing immediate sync...');
+        const user = await getCurrentUser();
+        if (user && !isSyncing()) {
+          await performSync();
+        } else {
+          await loadEntries();
+        }
         updateTodoCounter();
         setTimeout(() => TimeDivider.insert(), 100);
       }
@@ -1021,37 +1026,36 @@ Next step: [Action]
 
   const TimeDivider = {
     insert() {
-      const firstEntry = elements.entries.querySelector<HTMLElement>('.entry[data-id]');
-      console.log('TimeDivider.insert() - firstEntry:', firstEntry);
+      // Check last entry time from localStorage (set by MutationObserver)
+      // This represents when you LAST wrote something before this page load
+      const lastEntryTime = localStorage.getItem('lean-last-entry-time');
+      console.log('TimeDivider.insert() - lastEntryTime from localStorage:', lastEntryTime);
 
-      if (!firstEntry) {
-        console.log('No first entry found, skipping time divider');
+      if (!lastEntryTime) {
+        console.log('No last entry time found, skipping divider');
         return;
       }
 
-      const createdAt = firstEntry.dataset.created;
-      console.log('First entry created at:', createdAt);
-
-      if (!createdAt) {
-        console.log('No created_at timestamp, skipping');
-        return;
-      }
-
-      const entryTime = new Date(createdAt);
+      const entryTime = new Date(lastEntryTime);
       const now = new Date();
       const hoursDiff = (now.getTime() - entryTime.getTime()) / (1000 * 60 * 60);
 
-      console.log(`Time difference: ${hoursDiff.toFixed(1)} hours`);
+      console.log(`Hours since last entry: ${hoursDiff.toFixed(1)}`);
 
       if (hoursDiff <= 2) {
-        console.log('Less than 2 hours, no divider needed');
+        console.log('Less than 2 hours since last session, no divider needed');
         return;
       }
 
-      console.log('Inserting time divider!');
-      const dividerText = this.formatDividerText(now, hoursDiff);
-      const divider = this.createDividerElement(dividerText);
-      elements.entries.insertBefore(divider, firstEntry);
+      console.log('Inserting time divider for new session!');
+
+      // Insert divider at the top, before first entry
+      const firstEntry = elements.entries.querySelector<HTMLElement>('.entry[data-id]');
+      if (firstEntry) {
+        const dividerText = this.formatDividerText(now, hoursDiff);
+        const divider = this.createDividerElement(dividerText);
+        elements.entries.insertBefore(divider, firstEntry);
+      }
     },
 
     insertForClear() {

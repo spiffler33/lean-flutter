@@ -209,9 +209,9 @@ export async function sync(): Promise<SyncResult> {
 }
 
 /**
- * Start automatic sync (every 10 seconds for near-instant sync)
+ * Start automatic sync (every 5 seconds for near-instant sync)
  */
-export function startAutoSync(intervalMs: number = 10 * 1000) {
+export function startAutoSync(intervalMs: number = 5 * 1000) {
   if (syncState.autoSyncInterval) {
     stopAutoSync();
   }

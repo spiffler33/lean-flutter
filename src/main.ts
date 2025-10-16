@@ -109,8 +109,11 @@ const LeanApp = (function() {
     // Initial load and updates
     loadEntries().then(() => {
       updateTodoCounter();
-      // Small delay to ensure DOM is fully rendered
-      setTimeout(() => TimeDivider.insert(), 50);
+      // Delay to ensure DOM is fully rendered, then insert time divider
+      setTimeout(() => {
+        console.log('Attempting to insert time divider...');
+        TimeDivider.insert();
+      }, 200);
     });
   }
 
@@ -1009,17 +1012,33 @@ Next step: [Action]
   const TimeDivider = {
     insert() {
       const firstEntry = elements.entries.querySelector<HTMLElement>('.entry[data-id]');
-      if (!firstEntry) return;
+      console.log('TimeDivider.insert() - firstEntry:', firstEntry);
+
+      if (!firstEntry) {
+        console.log('No first entry found, skipping time divider');
+        return;
+      }
 
       const createdAt = firstEntry.dataset.created;
-      if (!createdAt) return;
+      console.log('First entry created at:', createdAt);
+
+      if (!createdAt) {
+        console.log('No created_at timestamp, skipping');
+        return;
+      }
 
       const entryTime = new Date(createdAt);
       const now = new Date();
       const hoursDiff = (now.getTime() - entryTime.getTime()) / (1000 * 60 * 60);
 
-      if (hoursDiff <= 2) return;
+      console.log(`Time difference: ${hoursDiff.toFixed(1)} hours`);
 
+      if (hoursDiff <= 2) {
+        console.log('Less than 2 hours, no divider needed');
+        return;
+      }
+
+      console.log('Inserting time divider!');
       const dividerText = this.formatDividerText(now, hoursDiff);
       const divider = this.createDividerElement(dividerText);
       elements.entries.insertBefore(divider, firstEntry);

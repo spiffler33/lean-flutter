@@ -1561,15 +1561,15 @@ ${tagBars || '   No tags yet'}
       <h4>Commands</h4>
       <div class="command"><span class="cmd">◎ /search term</span><span class="desc">Search entries</span></div>
       <div class="command"><span class="cmd">▦ /today</span><span class="desc">Today's entries</span></div>
-      <div class="command"><span class="cmd">▦ /yesterday</span><span class="desc">Yesterday's entries</span></div>
-      <div class="command"><span class="cmd">▦ /week</span><span class="desc">Last 7 days</span></div>
-      <div class="command"><span class="cmd">≈ /clear</span><span class="desc">Clear view</span></div>
-      <div class="command"><span class="cmd">▤ /export</span><span class="desc">Export as markdown</span></div>
+      <div class="command"><span class="cmd">≈ /yesterday</span><span class="desc">Yesterday's entries</span></div>
+      <div class="command"><span class="cmd">▤ /week</span><span class="desc">Last 7 days</span></div>
+      <div class="command"><span class="cmd">▨ /clear</span><span class="desc">Clear view</span></div>
+      <div class="command"><span class="cmd">▨ /export</span><span class="desc">Export as markdown</span></div>
       <div class="command"><span class="cmd">▊ /stats</span><span class="desc">View statistics</span></div>
-      <div class="command"><span class="cmd">▨ /theme [name]</span><span class="desc">Change theme</span></div>
+      <div class="command"><span class="cmd">◆ /theme [name]</span><span class="desc">Change theme</span></div>
       <div class="command"><span class="cmd">✎ /essay</span><span class="desc">Essay template</span></div>
       <div class="command"><span class="cmd">▪ /idea</span><span class="desc">Idea template</span></div>
-      <div class="command"><span class="cmd">? /help</span><span class="desc">Show this help</span></div>
+      <div class="command"><span class="cmd">◎ /help</span><span class="desc">Show this help</span></div>
 
       <h4 style="margin-top: 12px;">AI Features</h4>
       <div class="command"><span class="cmd">● /context [text]</span><span class="desc">Manage user context</span></div>
@@ -1664,6 +1664,13 @@ ${tagBars || '   No tags yet'}
   }
 
   async function handleGlobalEscape() {
+    // Check if FAB menu is open
+    const fabMenu = document.getElementById('fab-menu');
+    if (fabMenu?.classList.contains('show')) {
+      closeFabMenu();
+      return;
+    }
+
     const helpTooltip = document.querySelector('.help-tooltip');
     if (helpTooltip) {
       helpTooltip.remove();
@@ -1792,6 +1799,46 @@ ${tagBars || '   No tags yet'}
     elements.todoCounter.classList.remove('filtered');
   }
 
+  // ============ FAB Command Menu ============
+
+  function toggleFabMenu() {
+    const fabMenu = document.getElementById('fab-menu');
+    if (!fabMenu) return;
+
+    if (fabMenu.classList.contains('show')) {
+      closeFabMenu();
+    } else {
+      fabMenu.classList.add('show');
+    }
+  }
+
+  function closeFabMenu() {
+    const fabMenu = document.getElementById('fab-menu');
+    if (fabMenu) {
+      fabMenu.classList.remove('show');
+    }
+  }
+
+  async function executeFabCommand(command: string) {
+    closeFabMenu();
+
+    // For search, focus input and pre-fill command
+    if (command === '/search') {
+      elements.input.value = '/search ';
+      elements.input.focus();
+      return;
+    }
+
+    // Execute command by calling handleSubmit with the command
+    const originalValue = elements.input.value;
+    elements.input.value = command;
+    await handleSubmit();
+    // Don't restore if command was template (essay/idea)
+    if (command !== '/essay' && command !== '/idea') {
+      elements.input.value = originalValue;
+    }
+  }
+
   // ============ Public API ============
 
   return {
@@ -1811,7 +1858,10 @@ ${tagBars || '   No tags yet'}
     closeAuthModal,
     handleSignIn,
     handleSignUp,
-    handleForgotPassword
+    handleForgotPassword,
+    toggleFabMenu,
+    closeFabMenu,
+    executeFabCommand
   };
 })();
 
@@ -1830,6 +1880,9 @@ ${tagBars || '   No tags yet'}
 (window as any).handleSignIn = LeanApp.handleSignIn;
 (window as any).handleSignUp = LeanApp.handleSignUp;
 (window as any).handleForgotPassword = LeanApp.handleForgotPassword;
+(window as any).toggleFabMenu = LeanApp.toggleFabMenu;
+(window as any).closeFabMenu = LeanApp.closeFabMenu;
+(window as any).executeFabCommand = LeanApp.executeFabCommand;
 
 // Initialize app when DOM is ready
 window.addEventListener('load', () => LeanApp.init());

@@ -458,6 +458,56 @@
         </div>
     </div>
 
+    <!-- FAB Command Menu (Mobile Only) -->
+    <div id="fab-menu" class="fab-menu">
+        <div class="fab-menu-overlay" onclick="window.closeFabMenu && window.closeFabMenu()"></div>
+        <div class="fab-menu-content">
+            <div class="fab-menu-header">Commands</div>
+            <div class="fab-menu-items">
+                <button class="fab-menu-item" onclick="window.executeFabCommand('/search')">
+                    <span class="fab-icon">◎</span>
+                    <span class="fab-label">Search</span>
+                </button>
+                <button class="fab-menu-item" onclick="window.executeFabCommand('/today')">
+                    <span class="fab-icon">▦</span>
+                    <span class="fab-label">Today</span>
+                </button>
+                <button class="fab-menu-item" onclick="window.executeFabCommand('/patterns')">
+                    <span class="fab-icon">◆</span>
+                    <span class="fab-label">Patterns</span>
+                </button>
+                <button class="fab-menu-item" onclick="window.executeFabCommand('/context')">
+                    <span class="fab-icon">●</span>
+                    <span class="fab-label">Context</span>
+                </button>
+                <button class="fab-menu-item" onclick="window.executeFabCommand('/stats')">
+                    <span class="fab-icon">▊</span>
+                    <span class="fab-label">Stats</span>
+                </button>
+                <button class="fab-menu-item" onclick="window.executeFabCommand('/export')">
+                    <span class="fab-icon">▨</span>
+                    <span class="fab-label">Export</span>
+                </button>
+                <button class="fab-menu-item" onclick="window.executeFabCommand('/essay')">
+                    <span class="fab-icon">✎</span>
+                    <span class="fab-label">Essay</span>
+                </button>
+                <button class="fab-menu-item" onclick="window.executeFabCommand('/idea')">
+                    <span class="fab-icon">▪</span>
+                    <span class="fab-label">Idea</span>
+                </button>
+                <button class="fab-menu-item" onclick="window.executeFabCommand('/clear')">
+                    <span class="fab-icon">≈</span>
+                    <span class="fab-label">Clear</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <button id="fab-button" class="fab-button" onclick="window.toggleFabMenu && window.toggleFabMenu()" aria-label="Open commands">
+        <span class="fab-button-icon">⌘</span>
+    </button>
+
     <!-- Vite will inject the bundled TypeScript here -->
     <script type="module" src="/src/main.ts"></script>
 </body>

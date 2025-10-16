@@ -390,13 +390,9 @@ const LeanApp = (function() {
     // Reload entries when tab becomes visible (for background sync)
     document.addEventListener('visibilitychange', async () => {
       if (!document.hidden) {
-        console.log('Tab visible - forcing immediate sync...');
-        const user = await getCurrentUser();
-        if (user && !isSyncing()) {
-          await performSync();
-        } else {
-          await loadEntries();
-        }
+        console.log('Tab visible - reloading entries...');
+        // Don't force sync - let auto-sync handle it to avoid conflicts
+        await loadEntries();
         updateTodoCounter();
         setTimeout(() => TimeDivider.insert(), 100);
       }
@@ -1036,6 +1032,13 @@ Next step: [Action]
     insert() {
       // ALWAYS insert divider on page load - it indicates "page was refreshed"
       // Gets removed when user writes a new entry
+
+      // Remove any existing divider first
+      const existingDivider = document.querySelector('.time-divider');
+      if (existingDivider) {
+        existingDivider.remove();
+      }
+
       const firstEntry = elements.entries.querySelector<HTMLElement>('.entry[data-id]');
 
       if (!firstEntry) {

@@ -132,11 +132,8 @@ const LeanApp = (function() {
         elements.syncIndicator.classList.add('synced');
         elements.syncIndicator.textContent = '●';
 
-        // Start auto-sync
+        // Start auto-sync (includes initial sync)
         startAutoSync();
-
-        // Initial sync
-        await performSync();
       } else {
         // User is signed out
         elements.authButton.textContent = 'Sign In';

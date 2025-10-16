@@ -251,13 +251,14 @@ export async function enrichEntry(
 4. actions: Any task items or action items mentioned
 5. urgency: one of: none, low, medium, high
 
-IMPORTANT:
-- Only extract what's EXPLICITLY in the text
-- Don't infer from context unless clearly mentioned
+CRITICAL RULES:
+- For "people": ONLY extract names that appear EXPLICITLY in the Entry text below
+- DO NOT use names from "User context" unless they also appear in the Entry
+- If the Entry is "buy milk #todo", the people array MUST be empty: []
+- Only extract people whose names are literally written in the Entry text
 - For emotion, choose the single best match
-- For themes, only include if clearly present in the text
-- For people, extract proper names (capitalized)
-- For urgency, look for explicit time signals (asap, today, deadline, etc.)
+- For themes, only include if clearly present in the Entry text
+- For urgency, look for explicit time signals in Entry (asap, today, deadline, etc.)
 
 Entry: "${content}"
 
@@ -265,7 +266,7 @@ Respond with ONLY valid JSON in this exact format:
 {
   "emotion": "neutral",
   "themes": ["work"],
-  "people": ["Sarah"],
+  "people": [],
   "actions": ["finish report"],
   "urgency": "medium"
 }`;

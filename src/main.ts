@@ -407,10 +407,7 @@ const LeanApp = (function() {
   function setupObservers() {
     const observer = new MutationObserver(() => {
       updateTodoCounter();
-      const firstEntry = elements.entries.querySelector<HTMLElement>('.entry[data-id]');
-      if (firstEntry && firstEntry.dataset.created) {
-        localStorage.setItem('lean-last-entry-time', firstEntry.dataset.created);
-      }
+      // Don't update localStorage here - it gets updated when creating new entries only
     });
 
     observer.observe(elements.entries, {
@@ -831,6 +828,11 @@ Next step: [Action]
       device_id: getDeviceId(),
       tags: extractTags(content),
     });
+
+    // Update last entry time for time divider calculation
+    if (entry) {
+      localStorage.setItem('lean-last-entry-time', entry.created_at.toISOString());
+    }
 
     // Remove temp entry and add real one
     setTimeout(() => {

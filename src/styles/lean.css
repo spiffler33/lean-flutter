@@ -879,3 +879,107 @@ body.theme-mono .todo-checkbox {
         margin-left: 8px;
     }
 }
+/* ====================== AI ENRICHMENT BADGES ====================== */
+.ai-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+
+.ai-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: 12px;
+    background: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.ai-badge.mood {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.ai-badge.theme {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+.ai-badge.people {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+.ai-badge.urgency-low {
+    background: rgba(156, 163, 175, 0.1);
+    color: #9ca3af;
+    border-color: rgba(156, 163, 175, 0.2);
+}
+
+.ai-badge.urgency-medium {
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.2);
+}
+
+.ai-badge.urgency-high {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.ai-indicator {
+    font-size: 12px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Dark mode AI badges */
+@media (prefers-color-scheme: dark) {
+    .ai-badge {
+        background: rgba(139, 92, 246, 0.2);
+        color: #a78bfa;
+        border-color: rgba(139, 92, 246, 0.3);
+    }
+
+    .ai-badge.mood {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+        border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .ai-badge.theme {
+        background: rgba(59, 130, 246, 0.2);
+        color: #60a5fa;
+        border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .ai-badge.people {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+        border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .ai-badge.urgency-low {
+        background: rgba(156, 163, 175, 0.2);
+        color: #d1d5db;
+        border-color: rgba(156, 163, 175, 0.3);
+    }
+
+    .ai-badge.urgency-medium {
+        background: rgba(251, 191, 36, 0.2);
+        color: #fcd34d;
+        border-color: rgba(251, 191, 36, 0.3);
+    }
+
+    .ai-badge.urgency-high {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+}

@@ -821,6 +821,13 @@ Next step: [Action]
   }
 
   async function performEnrichment(entryId: string, content: string) {
+    // Show AI indicator
+    const indicator = document.querySelector(`.ai-indicator[data-entry-id="${entryId}"]`) as HTMLElement;
+    if (indicator) {
+      indicator.style.display = 'inline';
+      indicator.title = 'AI enrichment in progress...';
+    }
+
     try {
       // Get user context for AI prompting
       const userContext = await getContextString();
@@ -837,9 +844,40 @@ Next step: [Action]
         urgency: enrichment.urgency,
       });
 
-      console.log(`Enriched entry ${entryId}:`, enrichment);
+      console.log(`✨ Enriched entry ${entryId}:`, enrichment);
+
+      // Update the entry element with new badges
+      const entry = await db.entries.get(entryId);
+      if (entry) {
+        const entryEl = document.querySelector(`.entry[data-id="${entryId}"]`);
+        if (entryEl) {
+          const newEntryEl = createEntryElement(entry);
+          entryEl.replaceWith(newEntryEl);
+        }
+      }
+
+      // Hide indicator after a brief success animation
+      setTimeout(() => {
+        const updatedIndicator = document.querySelector(`.ai-indicator[data-entry-id="${entryId}"]`) as HTMLElement;
+        if (updatedIndicator) {
+          updatedIndicator.textContent = '✓';
+          updatedIndicator.title = 'AI enrichment complete';
+          setTimeout(() => {
+            updatedIndicator.style.display = 'none';
+          }, 2000);
+        }
+      }, 100);
     } catch (error) {
       console.error('Failed to enrich entry:', error);
+      // Hide indicator on error
+      if (indicator) {
+        indicator.textContent = '✗';
+        indicator.title = 'AI enrichment failed';
+        indicator.style.color = '#ef4444';
+        setTimeout(() => {
+          indicator.style.display = 'none';
+        }, 3000);
+      }
     }
   }
 
@@ -919,11 +957,32 @@ Next step: [Action]
       formattedContent = `<span class="todo-checkbox" onclick="window.toggleTodo('${entry.id}')">${checkbox}</span><span class="todo-text">${todoText}</span>`;
     }
 
+    // Build AI enrichment badges
+    let aiBadges = '';
+    if (entry.mood || entry.themes || entry.people || entry.actions) {
+      const badges = [];
+      if (entry.mood) badges.push(`<span class="ai-badge mood" title="Detected emotion">${entry.mood}</span>`);
+      if (entry.themes && entry.themes.length > 0) {
+        badges.push(`<span class="ai-badge theme" title="Detected themes">${entry.themes.join(', ')}</span>`);
+      }
+      if (entry.people && entry.people.length > 0) {
+        badges.push(`<span class="ai-badge people" title="People mentioned">${entry.people.join(', ')}</span>`);
+      }
+      if (entry.urgency && entry.urgency !== 'none') {
+        badges.push(`<span class="ai-badge urgency-${entry.urgency}" title="Urgency">${entry.urgency}</span>`);
+      }
+      if (badges.length > 0) {
+        aiBadges = `<div class="ai-badges">${badges.join('')}</div>`;
+      }
+    }
+
     div.innerHTML = `
       <div class="entry-content">${formattedContent}</div>
+      ${aiBadges}
       <div class="entry-meta">
         ${getRelativeTime(entry.created_at)}
         ${entry.synced ? '' : '<span style="color:#f59e0b;margin-left:8px;">•</span>'}
+        <span class="ai-indicator" data-entry-id="${entry.id}" style="display:none;margin-left:8px;color:#8b5cf6;">◐</span>
       </div>
       <div class="entry-actions">
         <button class="entry-action" onclick="window.editEntry('${entry.id}')" title="Edit">⋮</button>
@@ -1511,6 +1570,10 @@ ${tagBars || '   No tags yet'}
       <div class="command"><span class="cmd">✎ /essay</span><span class="desc">Essay template</span></div>
       <div class="command"><span class="cmd">▪ /idea</span><span class="desc">Idea template</span></div>
       <div class="command"><span class="cmd">? /help</span><span class="desc">Show this help</span></div>
+
+      <h4 style="margin-top: 12px;">AI Features</h4>
+      <div class="command"><span class="cmd">● /context [text]</span><span class="desc">Manage user context</span></div>
+      <div class="command"><span class="cmd">◆ /patterns</span><span class="desc">View AI insights</span></div>
 
       <h4 style="margin-top: 12px;">Todos</h4>
       <div class="command"><span class="cmd">#todo</span><span class="desc">Creates checkbox</span></div>

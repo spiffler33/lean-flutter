@@ -78,6 +78,7 @@ const LeanApp = (function() {
     '/theme': { handler: 'handleTheme', needsParam: false },
     '/context': { handler: 'handleContext', needsParam: false },
     '/patterns': { handler: 'handlePatterns' },
+    '/test-divider': { handler: 'handleTestDivider' },
   };
 
   // ============ Core Functions ============
@@ -793,6 +794,16 @@ Next step: [Action]
         showNotification(error.message || 'Failed to load patterns');
       }
 
+      clearInput();
+    },
+
+    handleTestDivider() {
+      // Set localStorage to 3 hours ago to test divider
+      const threeHoursAgo = new Date();
+      threeHoursAgo.setHours(threeHoursAgo.getHours() - 3);
+      localStorage.setItem('lean-last-entry-time', threeHoursAgo.toISOString());
+
+      showNotification('Set last entry to 3 hours ago. Refresh page to see divider!');
       clearInput();
     },
   };

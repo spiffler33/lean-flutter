@@ -4,9 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lean</title>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 
-    <!-- Critical above-fold CSS only -->
+    <!-- PWA meta tags -->
+    <meta name="description" content="Fast, private thought capture">
+    <meta name="theme-color" content="#4CAF50">
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- iOS PWA support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Lean">
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
@@ -24,7 +32,7 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* Critical header (above fold) */
+        /* Header */
         #lean-header {
             text-align: center;
             margin-bottom: 30px;
@@ -48,7 +56,26 @@
             letter-spacing: 2px;
         }
 
-        /* Critical input container (above fold) */
+        /* Sync status indicator */
+        #sync-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-size: 12px;
+            color: #666;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #e0e0e0;
+            z-index: 100;
+            display: none;
+        }
+
+        #sync-status.visible { display: block; }
+        #sync-status.syncing { color: #4CAF50; border-color: #4CAF50; }
+        #sync-status.offline { color: #999; }
+
+        /* Input container */
         #input-container {
             background: white;
             border-radius: 12px;
@@ -76,7 +103,38 @@
             box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
         }
 
-        /* Critical entry styles */
+        /* Save animation */
+        @keyframes pulse-green {
+            0% {
+                border-color: #4CAF50;
+                background: rgba(76, 175, 80, 0.05);
+                box-shadow: 0 0 0 5px rgba(76, 175, 80, 0.15);
+            }
+            100% {
+                border-color: #e0e0e0;
+                background: white;
+                box-shadow: 0 0 0 3px rgba(76, 175, 80, 0);
+            }
+        }
+
+        #thought-input.saving { animation: pulse-green 0.3s ease-out; }
+
+        /* Character counter */
+        .char-counter {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 11px;
+            color: #999;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .char-counter.visible { opacity: 1; }
+        .char-counter.warning { color: #f59e0b; }
+        .char-counter.danger { color: #ef4444; }
+
+        /* Entries */
         #entries { margin-top: 24px; }
 
         .entry {
@@ -106,23 +164,7 @@
             color: #aaa;
         }
 
-        /* Critical animations */
-        @keyframes pulse-green {
-            0% {
-                border-color: #4CAF50;
-                background: rgba(76, 175, 80, 0.05);
-                box-shadow: 0 0 0 5px rgba(76, 175, 80, 0.15);
-            }
-            100% {
-                border-color: #e0e0e0;
-                background: white;
-                box-shadow: 0 0 0 3px rgba(76, 175, 80, 0);
-            }
-        }
-
-        #thought-input.saving { animation: pulse-green 0.3s ease-out; }
-
-        /* Critical tag styles */
+        /* Tag styles */
         .tag {
             color: #4CAF50;
             text-decoration: none;
@@ -137,6 +179,87 @@
         .tag:hover {
             background: rgba(76, 175, 80, 0.1);
             transform: scale(1.05);
+        }
+
+        /* Entry animations */
+        .entry.new-entry { animation: slide-in 0.3s ease-out; }
+        @keyframes slide-in {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Success indicator */
+        .success-indicator {
+            margin-left: 8px;
+            color: #4CAF50;
+            opacity: 0;
+            animation: fade-in 0.3s ease-out forwards;
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Entry actions */
+        .entry-actions {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            display: none;
+            gap: 4px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+
+        .entry:hover .entry-actions { display: flex; }
+
+        .entry-action {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+
+        .entry-action:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: #333;
+        }
+
+        .entry-action.delete:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Loading state */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .no-entries {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 14px;
+        }
+
+        /* Todo styles */
+        .todo-checkbox {
+            cursor: pointer;
+            user-select: none;
+            margin-right: 8px;
+            font-size: 18px;
+        }
+
+        .entry.todo-done .entry-content {
+            opacity: 0.6;
+            text-decoration: line-through;
         }
 
         /* Critical time divider */
@@ -170,18 +293,59 @@
         #todo-counter.filtered { background: rgba(76, 175, 80, 0.1); color: #4CAF50; border: 1px solid #4CAF50; }
         #todo-counter.has-old { color: #f59e0b; }
 
-        /* Hidden form for HTMX */
-        #entry-form { display: none; }
+        /* Draft indicator */
+        .draft-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 11px;
+            color: #999;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
 
-        .entry.new-entry { animation: slide-in 0.3s ease-out; }
-        @keyframes slide-in {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .draft-indicator.visible {
+            opacity: 1;
+        }
+
+        /* Auth indicator */
+        #auth-indicator {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #666;
+            z-index: 10;
+        }
+
+        #sync-indicator {
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        #sync-indicator:hover { transform: scale(1.2); }
+        #sync-indicator.syncing { color: #4CAF50; animation: pulse 1s infinite; }
+        #sync-indicator.synced { color: #4CAF50; }
+        #sync-indicator.offline { color: #999; }
+
+        #auth-button {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        #auth-button:hover { background: rgba(0, 0, 0, 0.05); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
         }
     </style>
-
-    <!-- Non-critical styles loaded async -->
-    <link rel="stylesheet" href="/static/lean.css" media="print" onload="this.media='all'">
 </head>
 <body>
     <div id="lean-header">
@@ -189,26 +353,28 @@
         <div class="lean-tagline">━━━━━━━━━</div>
     </div>
 
-    <div id="todo-counter" onclick="LeanApp.toggleTodoFilter()"></div>
+    <div id="todo-counter" onclick="window.toggleTodoFilter && window.toggleTodoFilter()"></div>
+
+    <!-- Auth/Sync indicator -->
+    <div id="auth-indicator">
+        <span id="sync-indicator" title="Click to sync now">○</span>
+        <span id="auth-button">Sign In</span>
+    </div>
 
     <div id="input-container">
         <textarea id="thought-input" placeholder="What's on your mind?" autofocus rows="1"></textarea>
         <div id="char-counter" class="char-counter"></div>
         <div id="draft-indicator" class="draft-indicator">Draft saved</div>
-
-        <form id="entry-form" hx-post="/entries" hx-target="#entries" hx-swap="afterbegin">
-            <input type="hidden" name="content" id="hidden-content">
-        </form>
     </div>
 
-    <div id="entries" hx-get="/entries" hx-trigger="load"></div>
+    <div id="entries"></div>
 
     <!-- Modals -->
     <div id="stats-modal" class="modal">
         <div class="modal-content stats-modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">▊ Your Thought Patterns</h3>
-                <button class="modal-close" onclick="LeanApp.closeStatsModal()">×</button>
+                <button class="modal-close" onclick="window.closeStatsModal && window.closeStatsModal()">×</button>
             </div>
             <div class="modal-body">
                 <div id="stats-content"></div>
@@ -220,13 +386,13 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">Export Entries</h3>
-                <button class="modal-close" onclick="LeanApp.closeExportModal()">×</button>
+                <button class="modal-close" onclick="window.closeExportModal && window.closeExportModal()">×</button>
             </div>
             <div class="modal-body">
                 <div class="export-options">
                     <div class="export-row">
                         <label class="export-label">Date Range:</label>
-                        <select id="export-date-range" class="export-select" onchange="LeanApp.updateExport()">
+                        <select id="export-date-range" class="export-select" onchange="window.updateExport && window.updateExport()">
                             <option value="all">All time</option>
                             <option value="day">Last 24 hours</option>
                             <option value="week">Last 7 days</option>
@@ -235,1178 +401,64 @@
                     </div>
                     <div class="export-row">
                         <label class="export-label">Filter by tag:</label>
-                        <input type="text" id="export-tag-filter" class="export-select" placeholder="e.g., #work (optional)" oninput="LeanApp.updateExport()">
+                        <input type="text" id="export-tag-filter" class="export-select" placeholder="e.g., #work (optional)" oninput="window.updateExport && window.updateExport()">
                     </div>
                     <div class="export-row">
                         <label class="export-checkbox">
-                            <input type="checkbox" id="export-include-timestamps" checked onchange="LeanApp.updateExport()">
+                            <input type="checkbox" id="export-include-timestamps" checked onchange="window.updateExport && window.updateExport()">
                             Include timestamps
                         </label>
                     </div>
                 </div>
                 <div class="export-format-buttons">
-                    <button class="format-btn active" id="format-markdown" onclick="LeanApp.setExportFormat('markdown')">Markdown</button>
-                    <button class="format-btn" id="format-writeas" onclick="LeanApp.setExportFormat('writeas')">write.as</button>
+                    <button class="format-btn active" id="format-markdown" onclick="window.setExportFormat && window.setExportFormat('markdown')">Markdown</button>
+                    <button class="format-btn" id="format-writeas" onclick="window.setExportFormat && window.setExportFormat('writeas')">write.as</button>
                 </div>
                 <textarea id="export-content" class="export-textarea" readonly></textarea>
             </div>
             <div class="modal-footer">
-                <button class="modal-button" onclick="LeanApp.closeExportModal()">Close</button>
-                <button class="modal-button primary" onclick="LeanApp.copyExportContent()">Copy to Clipboard</button>
+                <button class="modal-button" onclick="window.closeExportModal && window.closeExportModal()">Close</button>
+                <button class="modal-button primary" onclick="window.copyExportContent && window.copyExportContent()">Copy to Clipboard</button>
             </div>
         </div>
     </div>
 
-    <script>
-    // Lean App - Refactored and componentized
-    const LeanApp = (function() {
-        'use strict';
-
-        // ============ State ============
-        const state = {
-            editingEntryId: null,
-            draftTimer: null,
-            currentTheme: localStorage.getItem('lean-theme') || 'minimal',
-            todoFilterActive: false,
-            currentExportFormat: 'markdown'
-        };
-
-        // ============ DOM Elements ============
-        const elements = {};
-
-        // ============ Key Bindings ============
-        const KEYS = {
-            ENTER: 'Enter',
-            ESCAPE: 'Escape',
-            ARROW_UP: 'ArrowUp',
-            SLASH: '/',
-            modifiers: {
-                shift: 'shiftKey',
-                meta: 'metaKey',
-                ctrl: 'ctrlKey',
-                alt: 'altKey'
-            }
-        };
-
-        // ============ Commands ============
-        const COMMANDS = {
-            '/search': { handler: 'handleSearch', needsParam: true },
-            '/today': { handler: 'handleToday' },
-            '/yesterday': { handler: 'handleYesterday' },
-            '/week': { handler: 'handleWeek' },
-            '/clear': { handler: 'handleClear' },
-            '/stats': { handler: 'handleStats' },
-            '/export': { handler: 'handleExport' },
-            '/help': { handler: 'handleHelp' },
-            '/essay': { handler: 'handleEssay' },
-            '/idea': { handler: 'handleIdea' },
-            '/theme': { handler: 'handleTheme', needsParam: false },
-            '/ai sum': { handler: 'handleAiSummary', needsParam: false }
-        };
-
-        // ============ Core Functions ============
-
-        function init() {
-            // Cache DOM elements
-            elements.input = document.getElementById('thought-input');
-            elements.form = document.getElementById('entry-form');
-            elements.hiddenContent = document.getElementById('hidden-content');
-            elements.entries = document.getElementById('entries');
-            elements.charCounter = document.getElementById('char-counter');
-            elements.draftIndicator = document.getElementById('draft-indicator');
-            elements.todoCounter = document.getElementById('todo-counter');
-
-            // Set up event listeners
-            setupEventListeners();
-
-            // Initialize theme and features
-            applyTheme(state.currentTheme);
-            loadDraft();
-            elements.input.focus();
-
-            // Start observers
-            setupObservers();
-
-            // Initial updates
-            setTimeout(() => {
-                updateTodoCounter();
-                TimeDivider.insert();
-            }, 100);
-        }
-
-        function setupEventListeners() {
-            // Input events
-            elements.input.addEventListener('input', handleInput);
-            elements.input.addEventListener('keydown', handleInputKeydown);
-
-            // Global keyboard shortcuts
-            document.addEventListener('keydown', handleGlobalKeydown);
-
-            // Modal close on escape or outside click
-            document.getElementById('stats-modal').addEventListener('click', handleModalOutsideClick);
-            document.getElementById('export-modal').addEventListener('click', handleModalOutsideClick);
-        }
-
-        function setupObservers() {
-            const observer = new MutationObserver(() => {
-                updateTodoCounter();
-                const firstEntry = elements.entries.querySelector('.entry[data-id]');
-                if (firstEntry && firstEntry.dataset.created) {
-                    localStorage.setItem('lean-last-entry-time', firstEntry.dataset.created);
-                }
-            });
-
-            observer.observe(elements.entries, {
-                childList: true,
-                subtree: true
-            });
-        }
-
-        // ============ Input Handling ============
-
-        function handleInput() {
-            autoResize();
-            updateCharCounter();
-
-            clearTimeout(state.draftTimer);
-            state.draftTimer = setTimeout(saveDraft, 3000);
-        }
-
-        async function handleInputKeydown(e) {
-            // Arrow Up - Edit last entry
-            if (e.key === KEYS.ARROW_UP && elements.input.value === '') {
-                e.preventDefault();
-                editLastEntry();
-                return;
-            }
-
-            // Escape - Clear or blur
-            if (e.key === KEYS.ESCAPE) {
-                handleEscapeInInput();
-                return;
-            }
-
-            // Enter - Submit or new line
-            if (e.key === KEYS.ENTER && !e[KEYS.modifiers.shift]) {
-                e.preventDefault();
-                await handleSubmit();
-            }
-        }
-
-        function handleGlobalKeydown(e) {
-            // Skip if in input or using modifiers
-            if (e.target === elements.input ||
-                e.target.tagName === 'INPUT' ||
-                e.target.tagName === 'TEXTAREA' ||
-                e[KEYS.modifiers.meta] ||
-                e[KEYS.modifiers.ctrl] ||
-                e[KEYS.modifiers.alt]) return;
-
-            // Jump to input on /
-            if (e.key === KEYS.SLASH) {
-                e.preventDefault();
-                elements.input.focus();
-                elements.input.value = '/';
-            }
-
-            // Escape handling
-            if (e.key === KEYS.ESCAPE) {
-                handleGlobalEscape();
-            }
-        }
-
-        // ============ Command Processing ============
-
-        async function handleSubmit() {
-            const content = elements.input.value.trim();
-            if (!content) return;
-
-            // Check for commands
-            for (const [cmd, config] of Object.entries(COMMANDS)) {
-                if (content.startsWith(cmd)) {
-                    await CommandHandlers[config.handler](content);
-                    return;
-                }
-            }
-
-            // Handle editing or new entry
-            if (state.editingEntryId) {
-                await updateEntry(state.editingEntryId, content);
-            } else {
-                await createEntry(content);
-            }
-        }
-
-        // ============ Command Handlers ============
-
-        const CommandHandlers = {
-            async handleSearch(content) {
-                const response = await fetch('/entries?search=' + encodeURIComponent(content));
-                const html = await response.text();
-                elements.entries.innerHTML = html;
-
-                const searchTerm = content.startsWith('/search ')
-                    ? 'search: ' + content.substring(8)
-                    : content.replace('/', '') + "'s entries";
-
-                addSearchIndicator(searchTerm);
-                clearInput();
-                updateTodoCounter();
-            },
-
-            async handleToday() {
-                await this.handleSearch('/today');
-            },
-
-            async handleYesterday() {
-                await this.handleSearch('/yesterday');
-            },
-
-            async handleWeek() {
-                await this.handleSearch('/week');
-            },
-
-            handleClear() {
-                elements.entries.innerHTML = '<div class="no-entries">View cleared. Start typing to add new thoughts!</div>';
-                state.todoFilterActive = false;
-                elements.todoCounter.classList.remove('filtered');
-                TimeDivider.insertForClear();
-                clearInput();
-                updateTodoCounter();
-            },
-
-            handleStats() {
-                showStatsModal();
-                clearInput();
-            },
-
-            handleExport() {
-                showExportModal();
-                clearInput();
-            },
-
-            handleHelp() {
-                showHelpTooltip();
-                clearInput();
-            },
-
-            handleEssay() {
-                const template = `# [Title Here]
-
-*[One-line hook that captures the essence]*
-
-## The Problem
-[What's broken? What tension exists? Why should anyone care?]
-
-## The Insight
-[The key realization. What you see that others don't]
-
-## The Evidence
-[Examples, data, observations that support your insight]
-
-## The Implications
-[What changes if this is true? What should we do differently?]
-
-## The Takeaway
-[One memorable line that captures the transformation]
-
----
-#essay #draft`;
-
-                elements.input.value = template;
-                elements.input.rows = 20;
-                autoResize();
-
-                const titlePos = template.indexOf('# [') + 2;
-                elements.input.setSelectionRange(titlePos, titlePos + 12);
-
-                elements.input.classList.add('saving');
-                setTimeout(() => elements.input.classList.remove('saving'), 300);
-            },
-
-            handleIdea() {
-                const template = `💡 [Title]
-
-[Describe the idea]
-
-Next step: [Action]
-
-#idea`;
-
-                elements.input.value = template;
-                elements.input.rows = 8;
-                autoResize();
-
-                const titlePos = template.indexOf('[Title]');
-                elements.input.setSelectionRange(titlePos, titlePos + 7);
-
-                elements.input.classList.add('saving');
-                setTimeout(() => elements.input.classList.remove('saving'), 300);
-            },
-
-            handleTheme(content) {
-                const parts = content.split(' ');
-                if (parts.length > 1) {
-                    const theme = parts[1].toLowerCase();
-                    const validThemes = ['minimal', 'matrix', 'paper', 'midnight', 'mono'];
-
-                    if (validThemes.includes(theme)) {
-                        applyTheme(theme);
-                        showNotification(`Theme switched to ${theme}`);
-                    } else {
-                        showThemeOptions();
-                    }
-                } else {
-                    showThemeInfo();
-                }
-                clearInput();
-            },
-
-            async handleAiSummary(content) {
-                const parts = content.split(' ');
-                const count = parts.length > 2 ? parseInt(parts[2]) || 20 : 20;
-
-                const loadingEntry = createLoadingEntry('◉ Generating summary');
-                elements.entries.insertBefore(loadingEntry, elements.entries.firstChild);
-
-                const formData = new FormData();
-                formData.append('count', count);
-
-                const response = await fetch('/ai/summarize', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
-
-                loadingEntry.remove();
-
-                const summaryEntry = createSummaryEntry(data);
-                elements.entries.insertBefore(summaryEntry, elements.entries.firstChild);
-
-                clearInput();
-            }
-        };
-
-        // ============ Entry Operations ============
-
-        async function createEntry(content) {
-            // Visual feedback
-            elements.input.classList.add('saving');
-            setTimeout(() => elements.input.classList.remove('saving'), 300);
-
-            // Optimistic UI
-            const tempEntry = createTempEntry(content);
-            insertEntry(tempEntry);
-
-            // Clear input immediately
-            clearInput();
-            localStorage.removeItem('lean-draft');
-
-            // Save to backend
-            elements.hiddenContent.value = content;
-            htmx.trigger(elements.form, 'submit');
-
-            // Remove temp entry after real one arrives
-            setTimeout(() => tempEntry.remove(), 500);
-        }
-
-        async function updateEntry(entryId, content) {
-            const formData = new FormData();
-            formData.append('content', content);
-
-            const response = await fetch(`/entries/${entryId}`, {
-                method: 'PUT',
-                body: formData
-            });
-            const html = await response.text();
-
-            const oldEntry = document.querySelector(`.entry[data-id="${entryId}"]`);
-            if (oldEntry && html) {
-                oldEntry.outerHTML = html;
-            }
-
-            state.editingEntryId = null;
-            clearInput();
-            localStorage.removeItem('lean-draft');
-        }
-
-        // ============ UI Components ============
-
-        const Toast = {
-            show(message, duration = 2000) {
-                const toast = document.createElement('div');
-                toast.className = 'toast';
-                toast.textContent = message;
-                document.body.appendChild(toast);
-
-                setTimeout(() => toast.classList.add('visible'), 10);
-                setTimeout(() => {
-                    toast.classList.remove('visible');
-                    setTimeout(() => toast.remove(), 300);
-                }, duration);
-            }
-        };
-
-        const TimeDivider = {
-            insert() {
-                const firstEntry = elements.entries.querySelector('.entry[data-id]');
-                if (!firstEntry) return;
-
-                const createdAt = firstEntry.dataset.created;
-                if (!createdAt) return;
-
-                const entryTime = new Date(createdAt);
-                const now = new Date();
-                const hoursDiff = (now - entryTime) / (1000 * 60 * 60);
-
-                if (hoursDiff <= 2) return;
-
-                const dividerText = this.formatDividerText(now, hoursDiff);
-                const divider = this.createDividerElement(dividerText);
-                elements.entries.insertBefore(divider, firstEntry);
-            },
-
-            insertForClear() {
-                const lastEntryTime = localStorage.getItem('lean-last-entry-time');
-                if (!lastEntryTime) return;
-
-                const entryTime = new Date(lastEntryTime);
-                const now = new Date();
-                const hoursDiff = (now - entryTime) / (1000 * 60 * 60);
-
-                if (hoursDiff <= 2) return;
-
-                const dividerText = this.formatDividerText(now, hoursDiff);
-                const divider = this.createDividerElement(dividerText);
-                elements.entries.insertBefore(divider, elements.entries.firstChild);
-            },
-
-            formatDividerText(now, hoursDiff) {
-                const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
-                const monthDay = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-                const time = now.toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                }).toLowerCase();
-
-                if (hoursDiff > 24) {
-                    const daysDiff = Math.floor(hoursDiff / 24);
-                    return daysDiff === 1
-                        ? `${dayName}, ${monthDay}, ${time}`
-                        : `${dayName}, ${monthDay}, ${time} — ${daysDiff} days later`;
-                }
-
-                return `${dayName}, ${monthDay}, ${time}`;
-            },
-
-            createDividerElement(text) {
-                const textLength = text.length;
-                const totalWidth = 50;
-                const paddingLength = Math.max(3, Math.floor((totalWidth - textLength - 2) / 2));
-                const leftLine = '━'.repeat(paddingLength);
-                const rightLine = '━'.repeat(paddingLength);
-
-                const divider = document.createElement('div');
-                divider.className = 'time-divider';
-                divider.innerHTML = `${leftLine} ${text} ${rightLine}`;
-                return divider;
-            }
-        };
-
-        // ============ Utility Functions ============
-
-        function autoResize() {
-            elements.input.style.height = 'auto';
-            elements.input.style.height = elements.input.scrollHeight + 'px';
-        }
-
-        function updateCharCounter() {
-            const length = elements.input.value.length;
-
-            if (length < 200) {
-                elements.charCounter.classList.remove('visible');
-                return;
-            }
-
-            elements.charCounter.classList.add('visible');
-
-            if (length < 280) {
-                elements.charCounter.textContent = `${length}`;
-                elements.charCounter.className = 'char-counter visible';
-            } else if (length < 400) {
-                elements.charCounter.textContent = `${length} / 280`;
-                elements.charCounter.className = 'char-counter visible warning';
-            } else {
-                elements.charCounter.textContent = `${length} / 400`;
-                elements.charCounter.className = 'char-counter visible danger';
-            }
-        }
-
-        function saveDraft() {
-            if (elements.input.value.trim()) {
-                localStorage.setItem('lean-draft', elements.input.value);
-                elements.draftIndicator.classList.add('visible');
-                setTimeout(() => elements.draftIndicator.classList.remove('visible'), 1000);
-            } else {
-                localStorage.removeItem('lean-draft');
-            }
-        }
-
-        function loadDraft() {
-            const draft = localStorage.getItem('lean-draft');
-            if (draft) {
-                elements.input.value = draft;
-                autoResize();
-                updateCharCounter();
-            }
-        }
-
-        function clearInput() {
-            elements.input.value = '';
-            autoResize();
-            updateCharCounter();
-        }
-
-        function applyTheme(theme) {
-            document.body.classList.remove('theme-minimal', 'theme-matrix', 'theme-paper', 'theme-midnight', 'theme-mono');
-            document.body.classList.add(`theme-${theme}`);
-            localStorage.setItem('lean-theme', theme);
-            state.currentTheme = theme;
-        }
-
-        // ============ Todo Functions ============
-
-        async function toggleTodo(entryId) {
-            const entry = document.querySelector(`.entry[data-id="${entryId}"]`);
-            if (!entry) return;
-
-            const todoText = entry.querySelector('.todo-text');
-            const content = todoText ? todoText.textContent : entry.querySelector('.entry-content').textContent.substring(2);
-            const checkbox = entry.querySelector('.todo-checkbox');
-
-            let newContent;
-            if (content.includes('#done')) {
-                newContent = content.replace('#done', '#todo');
-                checkbox.textContent = '□';
-                entry.classList.remove('todo-done');
-            } else {
-                newContent = content.replace('#todo', '#done');
-                checkbox.textContent = '☑';
-                entry.classList.add('todo-done');
-            }
-
-            const formData = new FormData();
-            formData.append('content', newContent);
-
-            try {
-                const response = await fetch(`/entries/${entryId}`, {
-                    method: 'PUT',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    // Revert on error
-                    if (newContent.includes('#done')) {
-                        checkbox.textContent = '□';
-                        entry.classList.remove('todo-done');
-                    } else {
-                        checkbox.textContent = '☑';
-                        entry.classList.add('todo-done');
-                    }
-                }
-
-                setTimeout(updateTodoCounter, 100);
-            } catch (error) {
-                console.error('Failed to toggle todo:', error);
-            }
-        }
-
-        async function toggleTodoFilter() {
-            const entries = document.querySelectorAll('.entry[data-id]');
-
-            if (entries.length === 0 && !state.todoFilterActive) {
-                await fetchAndShowTodos();
-                return;
-            }
-
-            state.todoFilterActive = !state.todoFilterActive;
-
-            if (state.todoFilterActive) {
-                filterTodos(entries);
-            } else {
-                showAllEntries(entries);
-            }
-        }
-
-        async function updateTodoCounter() {
-            try {
-                const response = await fetch('/todo-count');
-                const data = await response.json();
-
-                if (data.count > 0) {
-                    elements.todoCounter.textContent = `□ ${data.count}`;
-                    elements.todoCounter.classList.add('visible');
-                    elements.todoCounter.classList.toggle('has-old', data.has_old);
-                } else {
-                    elements.todoCounter.classList.remove('visible');
-                    state.todoFilterActive = false;
-                    elements.todoCounter.classList.remove('filtered');
-                }
-            } catch (error) {
-                console.error('Failed to fetch todo count:', error);
-            }
-        }
-
-        // ============ Modal Functions ============
-
-        async function showStatsModal() {
-            const modal = document.getElementById('stats-modal');
-            const statsContent = document.getElementById('stats-content');
-
-            statsContent.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">Loading stats...</div>';
-            modal.classList.add('show');
-
-            try {
-                const response = await fetch('/stats');
-                const data = await response.json();
-
-                if (data.empty) {
-                    statsContent.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">No entries yet. Start writing!</div>';
-                    return;
-                }
-
-                statsContent.innerHTML = formatStatsDisplay(data);
-            } catch (error) {
-                statsContent.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">Failed to load stats</div>';
-                console.error('Failed to load stats:', error);
-            }
-        }
-
-        function formatStatsDisplay(data) {
-            const fmt = (n) => n.toLocaleString();
-
-            const maxCount = Math.max(...data.activity_7days.map(d => d.count));
-            const activityBars = data.activity_7days.map(d => {
-                const barLength = maxCount > 0 ? Math.round((d.count / maxCount) * 20) : 0;
-                const bar = '█'.repeat(barLength) || '▁';
-                return `   ${d.day} ${bar} (${d.count})`;
-            }).join('\n');
-
-            const heatChars = ['□','▤','▥','▦','▧','▨','▩','█'];
-            const maxHeat = Math.max(...data.heatmap);
-            const heatmap = data.heatmap.map(count => {
-                if (count === 0) return heatChars[0];
-                const level = Math.min(7, Math.ceil((count / maxHeat) * 7));
-                return heatChars[level];
-            }).join('');
-
-            const maxTagCount = data.top_tags[0]?.count || 0;
-            const tagBars = data.top_tags.map((tag, i) => {
-                const num = ['①','②','③','④','⑤'][i];
-                const barLength = maxTagCount > 0 ? Math.round((tag.count / maxTagCount) * 12) : 0;
-                const bar = '█'.repeat(barLength);
-                return `   ${num} ${tag.tag.padEnd(10)} ${bar} (${tag.count})`;
-            }).join('\n');
-
-            return `<pre style="font-family:monospace;color:#333;line-height:1.6;">
-╔═══════════════════════════════════════╗
-║      ▊ Your Thought Patterns          ║
-╚═══════════════════════════════════════╝
-
-<strong>STREAK</strong>
-   Current Streak: ${'▲'.repeat(Math.min(data.current_streak, 10))} ${data.current_streak} day${data.current_streak !== 1 ? 's' : ''}
-   Longest Streak: ★ ${data.longest_streak} day${data.longest_streak !== 1 ? 's' : ''}
-
-<strong>STATS OVERVIEW</strong>
-   Entries ··········· ${fmt(data.total_entries)}
-   Today ············· ${data.today_count}
-   This Week ········· ${data.week_count}
-   This Month ········ ${data.month_count}
-   Total Words ······· ${fmt(data.total_words)}
-   Daily Average ····· ${data.daily_avg}
-   Best Day ·········· ${data.best_day}
-
-<strong>ACTIVITY (Last 7 days)</strong>
-${activityBars}
-
-<strong>TOP TAGS</strong>
-${tagBars || '   No tags yet'}
-
-<strong>30-DAY HEATMAP</strong>
-   Last 30 days: ${heatmap}
-
-<strong>TREND</strong>
-   Productivity: ${data.trend} this week
-</pre>`;
-        }
-
-        function closeStatsModal() {
-            const modal = document.getElementById('stats-modal');
-            modal.classList.remove('show');
-            elements.input.focus();
-        }
-
-        async function showExportModal() {
-            const modal = document.getElementById('export-modal');
-            modal.classList.add('show');
-
-            document.getElementById('export-date-range').value = 'all';
-            document.getElementById('export-tag-filter').value = '';
-            document.getElementById('export-include-timestamps').checked = true;
-            state.currentExportFormat = 'markdown';
-            document.getElementById('format-markdown').classList.add('active');
-            document.getElementById('format-writeas').classList.remove('active');
-
-            await updateExport();
-        }
-
-        async function updateExport() {
-            const dateRange = document.getElementById('export-date-range').value;
-            const tagFilter = document.getElementById('export-tag-filter').value;
-            const includeTimestamps = document.getElementById('export-include-timestamps').checked;
-
-            const params = new URLSearchParams({
-                date_range: dateRange,
-                include_timestamps: includeTimestamps,
-                format: state.currentExportFormat
-            });
-
-            if (tagFilter) {
-                params.append('tag', tagFilter);
-            }
-
-            const response = await fetch('/export?' + params);
-            const data = await response.json();
-
-            const exportContent = document.getElementById('export-content');
-            exportContent.value = data.markdown;
-
-            const copyBtn = document.querySelector('.modal-button.primary');
-            copyBtn.textContent = state.currentExportFormat === 'writeas'
-                ? 'Copy as write.as Draft'
-                : 'Copy to Clipboard';
-        }
-
-        function setExportFormat(format) {
-            state.currentExportFormat = format;
-
-            document.getElementById('format-markdown').classList.toggle('active', format === 'markdown');
-            document.getElementById('format-writeas').classList.toggle('active', format === 'writeas');
-
-            updateExport();
-        }
-
-        function closeExportModal() {
-            const modal = document.getElementById('export-modal');
-            modal.classList.remove('show');
-            elements.input.focus();
-        }
-
-        function copyExportContent() {
-            const exportContent = document.getElementById('export-content');
-            exportContent.select();
-            navigator.clipboard.writeText(exportContent.value).then(() => {
-                const button = event.target;
-                const originalText = button.textContent;
-                button.textContent = 'Copied!';
-                button.style.background = '#4CAF50';
-                setTimeout(() => {
-                    button.textContent = originalText;
-                    button.style.background = '';
-                }, 1500);
-            });
-        }
-
-        // ============ Helper Functions ============
-
-        function createTempEntry(content) {
-            const formattedContent = content.replace(/#(\w+)/g, '<a href="#" class="tag" onclick="LeanApp.searchTag(\'#$1\')">#$1</a>');
-            const displayContent = formattedContent.replace(/\n/g, '<br>');
-
-            const tempEntry = document.createElement('div');
-            tempEntry.className = 'entry new-entry';
-            tempEntry.dataset.tempId = 'temp-' + Date.now();
-            tempEntry.innerHTML = `
-                <div class="entry-content">${displayContent}</div>
-                <div class="entry-meta">◷ just now<span class="success-indicator">✓</span></div>
-            `;
-
-            return tempEntry;
-        }
-
-        function insertEntry(entry) {
-            const indicator = elements.entries.querySelector('.search-indicator');
-            if (indicator) {
-                elements.entries.insertBefore(entry, elements.entries.children[1]);
-            } else {
-                elements.entries.insertBefore(entry, elements.entries.firstChild);
-            }
-        }
-
-        function addSearchIndicator(searchTerm) {
-            const indicator = document.createElement('div');
-            indicator.className = 'search-indicator';
-            indicator.textContent = `Showing: ${searchTerm} (press Esc to clear)`;
-            elements.entries.insertBefore(indicator, elements.entries.firstChild);
-        }
-
-        function showNotification(message) {
-            const notif = document.createElement('div');
-            notif.className = 'entry';
-            notif.innerHTML = `
-                <div class="entry-content">▪ ${message}</div>
-                <div class="entry-meta">◷ just now</div>
-            `;
-            elements.entries.insertBefore(notif, elements.entries.firstChild);
-            setTimeout(() => notif.remove(), 3000);
-        }
-
-        function showHelpTooltip() {
-            const existingHelp = document.querySelector('.help-tooltip');
-            if (existingHelp) existingHelp.remove();
-
-            const helpDiv = document.createElement('div');
-            helpDiv.className = 'help-tooltip';
-            helpDiv.innerHTML = `
-                <h4>Commands</h4>
-                <div class="command"><span class="cmd">◎ /search term</span><span class="desc">Search entries</span></div>
-                <div class="command"><span class="cmd">▦ /today</span><span class="desc">Today's entries</span></div>
-                <div class="command"><span class="cmd">▦ /yesterday</span><span class="desc">Yesterday's entries</span></div>
-                <div class="command"><span class="cmd">▦ /week</span><span class="desc">Last 7 days</span></div>
-                <div class="command"><span class="cmd">≈ /clear</span><span class="desc">Clear view</span></div>
-                <div class="command"><span class="cmd">▤ /export</span><span class="desc">Export as markdown</span></div>
-                <div class="command"><span class="cmd">▊ /stats</span><span class="desc">View statistics</span></div>
-                <div class="command"><span class="cmd">◉ /ai sum [N]</span><span class="desc">AI summary</span></div>
-                <div class="command"><span class="cmd">▨ /theme [name]</span><span class="desc">Change theme</span></div>
-                <div class="command"><span class="cmd">✎ /essay</span><span class="desc">Essay template</span></div>
-                <div class="command"><span class="cmd">💡 /idea</span><span class="desc">Idea template</span></div>
-                <div class="command"><span class="cmd">◈ /context</span><span class="desc">View/manage context facts</span></div>
-                <div class="command"><span class="cmd">◆ /patterns</span><span class="desc">View learned patterns</span></div>
-                <div class="command"><span class="cmd">🧹 /clear-test-data</span><span class="desc">Remove test entries</span></div>
-                <div class="command"><span class="cmd">? /help</span><span class="desc">Show this help</span></div>
-
-                <h4 style="margin-top: 12px;">Todos</h4>
-                <div class="command"><span class="cmd">#todo</span><span class="desc">Creates checkbox</span></div>
-                <div class="command"><span class="cmd">Click □</span><span class="desc">Mark as done</span></div>
-
-                <h4 style="margin-top: 12px;">Keyboard</h4>
-                <div class="command"><span class="cmd">↑</span><span class="desc">Edit last entry</span></div>
-                <div class="command"><span class="cmd">/</span><span class="desc">Focus input</span></div>
-                <div class="command"><span class="cmd">Esc</span><span class="desc">Clear/close</span></div>
-
-                <div style="margin-top: 12px; color: #999; font-size: 11px;">Press Esc to close</div>
-            `;
-            document.body.appendChild(helpDiv);
-
-            setTimeout(() => {
-                if (helpDiv.parentNode) helpDiv.remove();
-            }, 10000);
-        }
-
-        function editLastEntry() {
-            const firstEntry = elements.entries.querySelector('.entry[data-id]');
-            if (!firstEntry) return;
-
-            const entryId = firstEntry.dataset.id;
-            const contentDiv = firstEntry.querySelector('.entry-content');
-            if (!contentDiv) return;
-
-            let content = contentDiv.innerHTML
-                .replace(/<br>/g, '\n')
-                .replace(/<a[^>]*class="tag"[^>]*onclick="[^"]*"[^>]*>([^<]+)<\/a>/g, '$1')
-                .replace(/<[^>]+>/g, '');
-
-            const textarea = document.createElement('textarea');
-            textarea.innerHTML = content;
-            content = textarea.value;
-
-            elements.input.value = content;
-            state.editingEntryId = entryId;
-            autoResize();
-            updateCharCounter();
-
-            firstEntry.classList.add('editing');
-
-            document.querySelectorAll('.entry.editing').forEach(entry => {
-                if (entry !== firstEntry) entry.classList.remove('editing');
-            });
-        }
-
-        function handleEscapeInInput() {
-            if (elements.input.value) {
-                elements.input.value = '';
-                autoResize();
-                updateCharCounter();
-                state.editingEntryId = null;
-
-                document.querySelectorAll('.entry.editing').forEach(entry => {
-                    entry.classList.remove('editing');
-                });
-            } else {
-                elements.input.blur();
-            }
-        }
-
-        async function handleGlobalEscape() {
-            const helpTooltip = document.querySelector('.help-tooltip');
-            if (helpTooltip) {
-                helpTooltip.remove();
-                elements.input.focus();
-                return;
-            }
-
-            const indicator = document.querySelector('.search-indicator');
-            if (indicator) {
-                const response = await fetch('/entries');
-                const html = await response.text();
-                elements.entries.innerHTML = html;
-
-                state.todoFilterActive = false;
-                elements.todoCounter.classList.remove('filtered');
-
-                elements.input.focus();
-            }
-        }
-
-        function handleModalOutsideClick(e) {
-            if (e.target === e.currentTarget) {
-                if (e.currentTarget.id === 'stats-modal') {
-                    closeStatsModal();
-                } else if (e.currentTarget.id === 'export-modal') {
-                    closeExportModal();
-                }
-            }
-        }
-
-        async function searchTag(tag) {
-            const response = await fetch('/entries?search=' + encodeURIComponent(tag));
-            const html = await response.text();
-            elements.entries.innerHTML = html;
-
-            addSearchIndicator(`Searching for: ${tag}`);
-            elements.input.focus();
-        }
-
-        function showThemeOptions() {
-            const themesDiv = document.createElement('div');
-            themesDiv.className = 'entry';
-            themesDiv.innerHTML = `
-                <div class="entry-content">
-                    <strong>▪ Available themes:</strong><br>
-                    /theme minimal - Clean and minimal (default)<br>
-                    /theme matrix - Green phosphor terminal<br>
-                    /theme paper - Warm paper-like colors<br>
-                    /theme midnight - Deep blues and purples<br>
-                    /theme mono - Pure black and white
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="auth-modal-title">Sign In to Sync</h3>
+                <button class="modal-close" onclick="window.closeAuthModal && window.closeAuthModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="auth-form">
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #666;">Email</label>
+                        <input type="email" id="auth-email" class="export-select" placeholder="your@email.com" style="width: 100%;" />
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #666;">Password</label>
+                        <input type="password" id="auth-password" class="export-select" placeholder="••••••••" style="width: 100%;" />
+                    </div>
+                    <div id="auth-error" style="color: #ef4444; font-size: 12px; margin-bottom: 12px; display: none;"></div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="modal-button primary" id="auth-signin-btn" style="flex: 1;" onclick="window.handleSignIn && window.handleSignIn()">Sign In</button>
+                        <button class="modal-button" id="auth-signup-btn" style="flex: 1;" onclick="window.handleSignUp && window.handleSignUp()">Sign Up</button>
+                    </div>
+                    <div style="text-align: center; margin-top: 12px;">
+                        <a href="#" style="font-size: 12px; color: #666; text-decoration: none;" onclick="window.handleForgotPassword && window.handleForgotPassword(); return false;">Forgot password?</a>
+                    </div>
                 </div>
-                <div class="entry-meta">◷ just now</div>
-            `;
-            elements.entries.insertBefore(themesDiv, elements.entries.firstChild);
-        }
-
-        function showThemeInfo() {
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'entry';
-            infoDiv.innerHTML = `
-                <div class="entry-content">
-                    <strong>▪ Current theme: ${state.currentTheme}</strong><br><br>
-                    Available themes:<br>
-                    /theme minimal - Clean and minimal (default)<br>
-                    /theme matrix - Green phosphor terminal<br>
-                    /theme paper - Warm paper-like colors<br>
-                    /theme midnight - Deep blues and purples<br>
-                    /theme mono - Pure black and white
+                <div id="auth-success" style="display: none; text-align: center; padding: 20px;">
+                    <div style="font-size: 32px; margin-bottom: 12px;">✓</div>
+                    <div style="color: #4CAF50; font-weight: 500;">Signed in successfully!</div>
+                    <div style="font-size: 12px; color: #666; margin-top: 8px;">Syncing your entries...</div>
                 </div>
-                <div class="entry-meta">◷ just now</div>
-            `;
-            elements.entries.insertBefore(infoDiv, elements.entries.firstChild);
-        }
+            </div>
+        </div>
+    </div>
 
-        function createLoadingEntry(text) {
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'entry';
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'entry-content';
-            contentDiv.innerHTML = text + ' ⠋';
-            loadingDiv.appendChild(contentDiv);
-
-            const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-            let i = 0;
-            const interval = setInterval(() => {
-                i = (i + 1) % frames.length;
-                contentDiv.innerHTML = text + ' ' + frames[i];
-            }, 80);
-
-            loadingDiv.dataset.intervalId = interval;
-            return loadingDiv;
-        }
-
-        function createSummaryEntry(data) {
-            const summaryDiv = document.createElement('div');
-            summaryDiv.className = 'entry';
-            summaryDiv.style.background = '#f8f9fa';
-            summaryDiv.innerHTML = `
-                <div class="entry-content">
-                    <strong>◉ AI Summary (${data.count} entries):</strong><br><br>
-                    ${data.summary.replace(/\n/g, '<br>')}
-                </div>
-                <div class="entry-meta">Generated just now</div>
-            `;
-            return summaryDiv;
-        }
-
-        async function fetchAndShowTodos() {
-            try {
-                const response = await fetch('/entries?search=' + encodeURIComponent('#todo'));
-                const html = await response.text();
-                elements.entries.innerHTML = html;
-
-                addSearchIndicator('Showing: todos');
-
-                state.todoFilterActive = true;
-                elements.todoCounter.classList.add('filtered');
-
-                setTimeout(updateTodoCounter, 100);
-            } catch (error) {
-                console.error('Failed to fetch todos:', error);
-            }
-        }
-
-        function filterTodos(entries) {
-            let hasTodos = false;
-            entries.forEach(entry => {
-                const content = entry.querySelector('.entry-content').textContent;
-                const isTodo = content.includes('#todo') || content.includes('#done');
-
-                if (isTodo) {
-                    hasTodos = true;
-                    entry.style.display = 'block';
-                } else {
-                    entry.style.display = 'none';
-                }
-            });
-
-            if (!hasTodos) {
-                fetchAndShowTodos();
-            } else {
-                elements.todoCounter.classList.add('filtered');
-            }
-        }
-
-        function showAllEntries(entries) {
-            const hasSearchIndicator = elements.entries.querySelector('.search-indicator');
-
-            if (hasSearchIndicator) {
-                fetch('/entries')
-                    .then(response => response.text())
-                    .then(html => {
-                        elements.entries.innerHTML = html;
-                    })
-                    .catch(error => console.error('Failed to reload entries:', error));
-            } else {
-                entries.forEach(entry => {
-                    entry.style.display = 'block';
-                });
-            }
-
-            elements.todoCounter.classList.remove('filtered');
-        }
-
-        // ============ Edit and Delete Functions ============
-
-        async function editEntry(entryId) {
-            const entry = document.querySelector(`.entry[data-id="${entryId}"]`);
-            if (!entry) return;
-
-            const contentDiv = entry.querySelector('.entry-content');
-            if (!contentDiv) return;
-
-            // Extract plain text from HTML content
-            let content = contentDiv.innerHTML
-                .replace(/<br>/g, '\n')
-                .replace(/<a[^>]*class="tag"[^>]*onclick="[^"]*"[^>]*>([^<]+)<\/a>/g, '$1')
-                .replace(/<span[^>]*class="todo-checkbox"[^>]*>[^<]+<\/span>/g, '') // Remove checkbox
-                .replace(/<span[^>]*class="todo-text"[^>]*>([^<]+)<\/span>/g, '$1') // Extract todo text
-                .replace(/<[^>]+>/g, '');
-
-            // Decode HTML entities
-            const textarea = document.createElement('textarea');
-            textarea.innerHTML = content;
-            content = textarea.value.trim();
-
-            // Load into input for editing
-            elements.input.value = content;
-            state.editingEntryId = entryId;
-            autoResize();
-            updateCharCounter();
-
-            // Highlight the entry being edited
-            entry.classList.add('editing');
-
-            // Remove editing class from any other entries
-            document.querySelectorAll('.entry.editing').forEach(e => {
-                if (e !== entry) e.classList.remove('editing');
-            });
-
-            // Focus input
-            elements.input.focus();
-        }
-
-        async function deleteEntry(entryId) {
-            const entry = document.querySelector(`.entry[data-id="${entryId}"]`);
-            if (!entry) return;
-
-            // Simple confirmation
-            if (!confirm('Delete this entry?')) return;
-
-            try {
-                const response = await fetch(`/entries/${entryId}`, {
-                    method: 'DELETE'
-                });
-
-                if (response.ok) {
-                    // Animate out then remove
-                    entry.style.opacity = '0';
-                    entry.style.transform = 'translateX(-20px)';
-                    setTimeout(() => {
-                        entry.remove();
-                        // Update todo counter after deletion
-                        updateTodoCounter();
-                    }, 300);
-                }
-            } catch (error) {
-                console.error('Failed to delete entry:', error);
-            }
-        }
-
-        // ============ Public API ============
-
-        return {
-            init,
-            toggleTodo,
-            toggleTodoFilter,
-            searchTag,
-            editEntry,
-            deleteEntry,
-            showStatsModal,
-            closeStatsModal,
-            showExportModal,
-            closeExportModal,
-            updateExport,
-            setExportFormat,
-            copyExportContent
-        };
-    })();
-
-    // Global functions for onclick handlers
-    window.toggleTodo = LeanApp.toggleTodo;
-    window.searchTag = LeanApp.searchTag;
-    window.editEntry = LeanApp.editEntry;
-    window.deleteEntry = LeanApp.deleteEntry;
-
-    // Initialize app when DOM is ready
-    window.addEventListener('load', () => LeanApp.init());
-    </script>
+    <!-- Vite will inject the bundled TypeScript here -->
+    <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

@@ -47,3 +47,4 @@ entries/
 *.tmp
 *.bak
 .claude/
+.vercel

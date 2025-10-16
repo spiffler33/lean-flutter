@@ -1,0 +1,15 @@
+# Vercel ignore file
+node_modules
+.env.local
+.git
+*.md
+supabase/migrations
+lean-v1
+test-auth.html
+test_*.py
+BEFORE_AFTER_COMPARISON.txt
+CONTEXT_FIX_SUMMARY.md
+LEAN_CONTEXT_EVOLUTION.md
+PATTERNS_REDESIGN_COMPLETE.md
+STAGE*.md
+*.txt

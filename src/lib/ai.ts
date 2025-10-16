@@ -5,7 +5,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 
-const ANTHROPIC_API_KEY = import.meta.env.ANTHROPIC_API_KEY;
+const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
 
 let anthropic: Anthropic | null = null;
 

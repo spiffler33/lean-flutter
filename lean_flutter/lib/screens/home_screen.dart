@@ -17,7 +17,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _inputController = TextEditingController();
   final _inputFocus = FocusNode();
-  final _keyboardListenerFocus = FocusNode(); // Separate focus for keyboard listener
   bool _showSaveFlash = false;
 
   @override
@@ -33,7 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _inputController.dispose();
     _inputFocus.dispose();
-    _keyboardListenerFocus.dispose();
     super.dispose();
   }
 
@@ -48,13 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Clear input
       _inputController.clear();
-
-      // CRITICAL: Keep focus on input - use post frame callback to ensure it works
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _inputFocus.requestFocus();
-        }
-      });
 
       // Show subtle green flash (like original)
       if (mounted) {
@@ -137,39 +128,36 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-              child: KeyboardListener(
-                focusNode: _keyboardListenerFocus,
-                onKeyEvent: (KeyEvent event) {
-                  if (event is KeyDownEvent) {
-                    // Check for Enter key without Shift
-                    if (event.logicalKey == LogicalKeyboardKey.enter &&
-                        !HardwareKeyboard.instance.isShiftPressed) {
-                      _saveEntry();
-                    }
-                  }
-                },
-                child: TextField(
-                  controller: _inputController,
-                  focusNode: _inputFocus,
-                  maxLines: 1, // Single line
-                  autofocus: true, // Always autofocus
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: AppTheme.darkTextPrimary,
-                    height: 1.5,
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: 'What\'s on your mind?',
-                    hintStyle: TextStyle(
-                      color: AppTheme.darkTextSecondary,
+                    child: TextField(
+                      controller: _inputController,
+                      focusNode: _inputFocus,
+                      maxLines: 1, // Single line
+                      autofocus: true, // Always autofocus
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) {
+                        _saveEntry();
+                        // CRITICAL: Re-focus immediately after save
+                        Future.microtask(() {
+                          if (mounted) {
+                            _inputFocus.requestFocus();
+                          }
+                        });
+                      },
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: AppTheme.darkTextPrimary,
+                        height: 1.5,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: 'What\'s on your mind?',
+                        hintStyle: TextStyle(
+                          color: AppTheme.darkTextSecondary,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
                   ),
-                  // Don't use onSubmitted - it interferes
-                ),
-              ),
-            ),
 
                   const SizedBox(height: 24),
 

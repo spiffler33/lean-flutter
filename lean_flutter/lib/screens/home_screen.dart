@@ -128,24 +128,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-              child: RawKeyboardListener(
+              child: KeyboardListener(
                 focusNode: FocusNode(),
-                onKey: (RawKeyEvent event) {
-                  if (event is RawKeyDownEvent) {
-                    // Enter without shift = save
-                    if (event.logicalKey.keyLabel == 'Enter' &&
-                        !event.isShiftPressed) {
+                onKeyEvent: (KeyEvent event) {
+                  if (event is KeyDownEvent) {
+                    // Check for Enter key without Shift
+                    if (event.logicalKey == LogicalKeyboardKey.enter &&
+                        !HardwareKeyboard.instance.isShiftPressed) {
                       _saveEntry();
-                      // Prevent default newline
-                      return;
                     }
                   }
                 },
                 child: TextField(
                   controller: _inputController,
                   focusNode: _inputFocus,
-                  maxLines: null,
-                  minLines: 1,
+                  maxLines: 1, // Single line
                   style: const TextStyle(
                     fontSize: 16,
                     color: AppTheme.darkTextPrimary,
@@ -159,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.zero,
                   ),
+                  // Don't use onSubmitted - it interferes
                 ),
               ),
             ),

@@ -191,6 +191,16 @@ Type → Save → Search. Zero chrome, zero friction, zero compromises.
 - Offline-first (100% functional without network)
 - Background sync ready (10s intervals)
 
+**UI Redesign (2025-10-17):**
+- [x] Extracted EXACT colors/styling from original PWA (index.html + lean.css)
+- [x] Created AppTheme with dark navy (#111) background
+- [x] Beautiful pill-shaped AI badges (emotion, themes, people, urgency)
+- [x] "L  E  A  N" header with ━━━━━━━━━ line
+- [x] "What's on your mind?" placeholder
+- [x] Dark entry cards (#1A1A1A) with 8px radius
+- [x] Commit: `b9fafdf - REDESIGN COMPLETE`
+- ✅ **App now looks as beautiful as the original!** 🎨
+
 **Not Yet Done**:
 - Search/commands UI
 - Edit/delete entries

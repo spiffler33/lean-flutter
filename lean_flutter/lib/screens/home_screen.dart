@@ -73,12 +73,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: SafeArea(
         child: Center(
-          child: ConstrainedBox(
+          child: Container(
+            width: double.infinity,
             constraints: const BoxConstraints(maxWidth: 680),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
                   const SizedBox(height: 10),
 
                   // Header: "L E A N" with line (matching original)
@@ -216,7 +216,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ],
-              ),
             ),
           ),
         ),

@@ -107,54 +107,63 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 30),
 
-                  // Input box with save flash animation
+                  // Input box with save flash animation (OUTER container)
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16), // Outer padding
                     decoration: BoxDecoration(
-                      color: AppTheme.darkEntryBackground,
+                      color: AppTheme.darkEntryBackground, // #1a1a1a
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _showSaveFlash ? AppTheme.accentGreen : Colors.transparent,
-                        width: 2,
-                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: _showSaveFlash
-                              ? AppTheme.accentGreen.withOpacity(0.15)
-                              : Colors.black.withOpacity(0.08),
-                          blurRadius: _showSaveFlash ? 8 : 3,
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 3,
                           offset: const Offset(0, 1),
                         ),
                       ],
                     ),
-                    child: TextField(
-                      controller: _inputController,
-                      focusNode: _inputFocus,
-                      maxLines: 1, // Single line
-                      autofocus: true, // Always autofocus
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) {
-                        _saveEntry();
-                        // CRITICAL: Re-focus immediately after save
-                        Future.microtask(() {
-                          if (mounted) {
-                            _inputFocus.requestFocus();
-                          }
-                        });
-                      },
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: AppTheme.darkTextPrimary,
-                        height: 1.5,
-                      ),
-                      decoration: const InputDecoration(
-                        hintText: 'What\'s on your mind?',
-                        hintStyle: TextStyle(
-                          color: AppTheme.darkTextSecondary,
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 48), // min-height from CSS
+                      decoration: BoxDecoration(
+                        color: AppTheme.darkInputBackground, // #262626
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _showSaveFlash
+                              ? AppTheme.accentGreen
+                              : AppTheme.darkBorderColor, // #404040
+                          width: 2,
                         ),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
+                      ),
+                      padding: const EdgeInsets.all(12), // Inner padding
+                      child: TextField(
+                        controller: _inputController,
+                        focusNode: _inputFocus,
+                        maxLines: 1, // Single line
+                        autofocus: true, // Always autofocus
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) {
+                          _saveEntry();
+                          // CRITICAL: Re-focus immediately after save
+                          Future.microtask(() {
+                            if (mounted) {
+                              _inputFocus.requestFocus();
+                            }
+                          });
+                        },
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: AppTheme.darkTextPrimary,
+                          height: 1.5,
+                        ),
+                        decoration: const InputDecoration(
+                          hintText: 'What\'s on your mind?',
+                          hintStyle: TextStyle(
+                            color: AppTheme.darkTextSecondary,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          isDense: true,
+                        ),
                       ),
                     ),
                   ),

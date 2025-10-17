@@ -44,8 +44,11 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await provider.createEntry(content);
 
-      // Clear input FIRST to prevent newline
+      // Clear input
       _inputController.clear();
+
+      // CRITICAL: Keep focus on input so user can immediately type next entry
+      _inputFocus.requestFocus();
 
       // Show subtle green flash (like original)
       if (mounted) {

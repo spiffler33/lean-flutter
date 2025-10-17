@@ -91,7 +91,7 @@ class AppTheme {
   static ThemeData darkTheme() {
     return ThemeData(
       brightness: Brightness.dark,
-      fontFamily: '-apple-system, BlinkMacSystemFont, SF Pro Text',
+      // Use system font (don't specify fontFamily)
       scaffoldBackgroundColor: darkBackground,
       colorScheme: const ColorScheme.dark(
         primary: accentGreen,
@@ -210,7 +210,7 @@ class AppTheme {
   static ThemeData midnightTheme() {
     return ThemeData(
       brightness: Brightness.dark,
-      fontFamily: '-apple-system, BlinkMacSystemFont, SF Pro Text',
+      // Use system font
       scaffoldBackgroundColor: midnightBackground,
       colorScheme: const ColorScheme.dark(
         primary: midnightAccent,
@@ -249,7 +249,7 @@ class AppTheme {
   static ThemeData monoTheme() {
     return ThemeData(
       brightness: Brightness.light,
-      fontFamily: '-apple-system, BlinkMacSystemFont, SF Pro Text',
+      // Use system font
       scaffoldBackgroundColor: monoBackground,
       colorScheme: const ColorScheme.light(
         primary: monoText,

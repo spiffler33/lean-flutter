@@ -41,8 +41,8 @@ class EntryWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Content
-            Text(
+            // Content (selectable)
+            SelectableText(
               entry.content,
               style: TextStyle(
                 fontSize: 16,

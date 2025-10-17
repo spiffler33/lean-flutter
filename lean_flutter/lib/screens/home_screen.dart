@@ -17,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _inputController = TextEditingController();
   final _inputFocus = FocusNode();
+  bool _showSaveFlash = false;
 
   @override
   void initState() {
@@ -43,25 +44,24 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await provider.createEntry(content);
 
-      // Clear input
+      // Clear input FIRST to prevent newline
       _inputController.clear();
 
-      // Show success feedback
+      // Show subtle green flash (like original)
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✓ Saved'),
-            duration: Duration(milliseconds: 800),
-            backgroundColor: Colors.green,
-          ),
-        );
+        setState(() => _showSaveFlash = true);
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) setState(() => _showSaveFlash = false);
+        });
       }
     } catch (e) {
       if (mounted) {
+        // Only show error as SnackBar
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -107,20 +107,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 30),
 
-                  // Input box (matching original styling)
-                  Container(
+                  // Input box with save flash animation
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
                     padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.darkEntryBackground,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.darkEntryBackground,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _showSaveFlash ? AppTheme.accentGreen : Colors.transparent,
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _showSaveFlash
+                              ? AppTheme.accentGreen.withOpacity(0.15)
+                              : Colors.black.withOpacity(0.08),
+                          blurRadius: _showSaveFlash ? 8 : 3,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
               child: RawKeyboardListener(
                 focusNode: FocusNode(),
                 onKey: (RawKeyEvent event) {

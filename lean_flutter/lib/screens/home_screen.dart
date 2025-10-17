@@ -71,14 +71,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Container(
-            width: double.infinity,
-            constraints: const BoxConstraints(maxWidth: 680),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
+      body: Center(
+        child: Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(maxWidth: 680),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
                   const SizedBox(height: 10),
 
                   // Header: "L E A N" with line (matching original)
@@ -123,7 +122,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     child: Container(
-                      constraints: const BoxConstraints(minHeight: 48), // min-height from CSS
                       decoration: BoxDecoration(
                         color: AppTheme.darkInputBackground, // #262626
                         borderRadius: BorderRadius.circular(8),
@@ -134,12 +132,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           width: 2,
                         ),
                       ),
-                      padding: const EdgeInsets.all(12), // Inner padding
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // Less vertical padding
                       child: TextField(
                         controller: _inputController,
                         focusNode: _inputFocus,
-                        maxLines: 1, // Single line
-                        autofocus: true, // Always autofocus
+                        maxLines: 1, // Single line only
+                        autofocus: true,
                         textInputAction: TextInputAction.send,
                         onSubmitted: (_) {
                           _saveEntry();
@@ -153,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: const TextStyle(
                           fontSize: 16,
                           color: AppTheme.darkTextPrimary,
-                          height: 1.5,
+                          height: 1.2, // Tighter line height for single line
                         ),
                         decoration: const InputDecoration(
                           hintText: 'What\'s on your mind?',

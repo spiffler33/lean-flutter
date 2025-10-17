@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/entry_provider.dart';
 import '../widgets/entry_widget.dart';
@@ -71,42 +72,44 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 30),
-
-            // Header: "L E A N" with line (matching original)
-            Center(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Text(
-                    'L  E  A  N',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 8,
-                      color: Colors.white.withOpacity(0.4),
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    '━━━━━━━━━',
-                    style: TextStyle(
-                      fontSize: 10,
-                      letterSpacing: 2,
-                      color: Colors.white.withOpacity(0.2),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                  const SizedBox(height: 10),
 
-            const SizedBox(height: 30),
+                  // Header: "L E A N" with line (matching original)
+                  Column(
+                    children: [
+                      Text(
+                        'L  E  A  N',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w300,
+                          letterSpacing: 8,
+                          color: Colors.white.withOpacity(0.4),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        '━━━━━━━━━',
+                        style: TextStyle(
+                          fontSize: 10,
+                          letterSpacing: 2,
+                          color: Colors.white.withOpacity(0.2),
+                        ),
+                      ),
+                    ],
+                  ),
 
-            // Input box (matching original styling)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.all(16),
+                  const SizedBox(height: 30),
+
+                  // Input box (matching original styling)
+                  Container(
+                    padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppTheme.darkEntryBackground,
                 borderRadius: BorderRadius.circular(12),
@@ -118,75 +121,92 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              child: TextField(
-                controller: _inputController,
-                focusNode: _inputFocus,
-                maxLines: 3,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: AppTheme.darkTextPrimary,
-                  height: 1.5,
-                ),
-                decoration: const InputDecoration(
-                  hintText: 'What\'s on your mind?',
-                  hintStyle: TextStyle(
-                    color: AppTheme.darkTextSecondary,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                onSubmitted: (_) => _saveEntry(),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Entry list
-            Expanded(
-              child: Consumer<EntryProvider>(
-                builder: (context, provider, _) {
-                  if (provider.isLoading) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: AppTheme.accentGreen,
-                      ),
-                    );
+              child: RawKeyboardListener(
+                focusNode: FocusNode(),
+                onKey: (RawKeyEvent event) {
+                  if (event is RawKeyDownEvent) {
+                    // Enter without shift = save
+                    if (event.logicalKey.keyLabel == 'Enter' &&
+                        !event.isShiftPressed) {
+                      _saveEntry();
+                      // Prevent default newline
+                      return;
+                    }
                   }
-
-                  if (provider.error != null) {
-                    return Center(
-                      child: Text(
-                        'Error: ${provider.error}',
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    );
-                  }
-
-                  if (provider.entries.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'No entries yet.\nStart typing above!',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppTheme.darkTextSecondary,
-                          fontSize: 14,
-                        ),
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: provider.entries.length,
-                    itemBuilder: (context, index) {
-                      final entry = provider.entries[index];
-                      return EntryWidget(entry: entry);
-                    },
-                  );
                 },
+                child: TextField(
+                  controller: _inputController,
+                  focusNode: _inputFocus,
+                  maxLines: null,
+                  minLines: 1,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.darkTextPrimary,
+                    height: 1.5,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'What\'s on your mind?',
+                    hintStyle: TextStyle(
+                      color: AppTheme.darkTextSecondary,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
               ),
             ),
-          ],
+
+                  const SizedBox(height: 24),
+
+                  // Entry list
+                  Expanded(
+                    child: Consumer<EntryProvider>(
+                      builder: (context, provider, _) {
+                        if (provider.isLoading) {
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              color: AppTheme.accentGreen,
+                            ),
+                          );
+                        }
+
+                        if (provider.error != null) {
+                          return Center(
+                            child: Text(
+                              'Error: ${provider.error}',
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          );
+                        }
+
+                        if (provider.entries.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'No entries yet.\nStart typing above!',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppTheme.darkTextSecondary,
+                                fontSize: 14,
+                              ),
+                            ),
+                          );
+                        }
+
+                        return ListView.builder(
+                          padding: EdgeInsets.zero,
+                          itemCount: provider.entries.length,
+                          itemBuilder: (context, index) {
+                            final entry = provider.entries[index];
+                            return EntryWidget(entry: entry);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -158,4 +158,61 @@ Type → Save → Search. Zero chrome, zero friction, zero compromises.
 
 ---
 
-**Next Step**: Create `flutter-rebuild` branch and run Phase 0 setup.
+## Progress Tracking
+
+### ✅ Phase 0: Complete (2025-10-17)
+- [x] Created `flutter-rebuild` branch
+- [x] Installed Flutter SDK 3.35.6
+- [x] Created Flutter project with full platform support
+- [x] Added Supabase + SQLite + Provider dependencies
+- [x] Set up folder structure (models, services, screens, widgets)
+- [x] Commit: `14b421b - Phase 0 Complete`
+
+### ✅ Phase 1: Complete (2025-10-17)
+**Backend** (2 hours):
+- [x] Entry model with full schema (tags, actions, emotion, themes, people, urgency)
+- [x] DatabaseService: SQLite with sqflite (CRUD, search, todos, sync tracking)
+- [x] SupabaseService: Auth + CRUD with RLS ready
+- [x] EntryProvider: State management with optimistic UI + background sync
+- [x] Commits: `5c658ad` (backend), `e8c63e3` (UI)
+
+**Frontend** (done):
+- [x] HomeScreen: Input box (always focused) + Entry list
+- [x] EntryWidget: ASCII checkboxes (□/☑), relative timestamps, indicators
+- [x] Optimistic UI: Instant saves (<100ms to SQLite)
+- [x] Green success toast on save
+- [x] Entry count in header
+- [x] Light/dark themes (monospace aesthetic)
+
+**What Works**:
+- Create entries (Enter to save, <100ms)
+- Display entries (newest first)
+- Todo detection (#todo, #done)
+- Offline-first (100% functional without network)
+- Background sync ready (10s intervals)
+
+**Not Yet Done**:
+- Search/commands UI
+- Edit/delete entries
+- Export functionality
+- Supabase connection (needs credentials)
+- Time dividers
+- Theme switcher UI
+
+### 🔲 Phase 2: Commands & Features (Next)
+- [ ] Command parser (/search, /today, /export)
+- [ ] Search UI
+- [ ] Edit/delete functionality
+- [ ] Export modal
+- [ ] Stats modal
+- [ ] Theme switcher
+- [ ] Connect Supabase for real sync
+
+### 🔲 Phase 3: Mobile Polish (Pending)
+### 🔲 Phase 4: LLM Intelligence (Pending)
+### 🔲 Phase 5: Whisper Voice (Optional)
+
+---
+
+**Current Status**: Phase 1 complete, ready for Phase 2
+**Next Step**: Implement search/commands or connect Supabase sync

@@ -1,12 +1,15 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/entry.dart';
 
 /// Local SQLite database service for offline-first storage
+/// Note: On web, uses in-memory storage (entries cleared on refresh)
 class DatabaseService {
   static DatabaseService? _instance;
   static Database? _database;
+  static List<Entry> _webMemoryStorage = []; // For web platform
 
   static DatabaseService get instance {
     _instance ??= DatabaseService._();
@@ -16,6 +19,10 @@ class DatabaseService {
   DatabaseService._();
 
   Future<Database> get database async {
+    if (kIsWeb) {
+      // On web, return null database (will use memory storage)
+      throw UnsupportedError('SQLite not supported on web');
+    }
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
@@ -61,6 +68,14 @@ class DatabaseService {
 
   /// Insert entry (returns local ID)
   Future<int> insertEntry(Entry entry) async {
+    if (kIsWeb) {
+      // Web: use in-memory storage
+      final id = _webMemoryStorage.isEmpty ? 1 : (_webMemoryStorage.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b) + 1);
+      final newEntry = entry.copyWith(id: id);
+      _webMemoryStorage.insert(0, newEntry);
+      return id;
+    }
+
     final db = await database;
     final data = entry.toJson();
     data['synced'] = 0; // Mark as not synced
@@ -99,6 +114,11 @@ class DatabaseService {
 
   /// Get all entries
   Future<List<Entry>> getEntries({int limit = 50}) async {
+    if (kIsWeb) {
+      // Web: return from memory storage
+      return _webMemoryStorage.take(limit).toList();
+    }
+
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'entries',
@@ -111,6 +131,15 @@ class DatabaseService {
 
   /// Get entry by ID
   Future<Entry?> getEntry(int id) async {
+    if (kIsWeb) {
+      // Web: find in memory storage
+      try {
+        return _webMemoryStorage.firstWhere((e) => e.id == id);
+      } catch (e) {
+        return null;
+      }
+    }
+
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'entries',
@@ -162,6 +191,10 @@ class DatabaseService {
 
   /// Get entry count
   Future<int> getEntryCount() async {
+    if (kIsWeb) {
+      return _webMemoryStorage.length;
+    }
+
     final db = await database;
     final result = await db.rawQuery('SELECT COUNT(*) as count FROM entries');
     return Sqflite.firstIntValue(result) ?? 0;

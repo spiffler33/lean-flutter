@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/entry_provider.dart';
@@ -7,8 +8,10 @@ import 'screens/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize local database
-  await DatabaseService.instance.database;
+  // Initialize local database (only on mobile/desktop, not web)
+  if (!kIsWeb) {
+    await DatabaseService.instance.database;
+  }
 
   // TODO: Initialize Supabase (Phase 2)
   // const supabaseUrl = String.fromEnvironment('SUPABASE_URL');

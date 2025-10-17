@@ -17,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _inputController = TextEditingController();
   final _inputFocus = FocusNode();
+  final _keyboardListenerFocus = FocusNode(); // Separate focus for keyboard listener
   bool _showSaveFlash = false;
 
   @override
@@ -32,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _inputController.dispose();
     _inputFocus.dispose();
+    _keyboardListenerFocus.dispose();
     super.dispose();
   }
 
@@ -47,8 +49,12 @@ class _HomeScreenState extends State<HomeScreen> {
       // Clear input
       _inputController.clear();
 
-      // CRITICAL: Keep focus on input so user can immediately type next entry
-      _inputFocus.requestFocus();
+      // CRITICAL: Keep focus on input - use post frame callback to ensure it works
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _inputFocus.requestFocus();
+        }
+      });
 
       // Show subtle green flash (like original)
       if (mounted) {
@@ -132,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
               child: KeyboardListener(
-                focusNode: FocusNode(),
+                focusNode: _keyboardListenerFocus,
                 onKeyEvent: (KeyEvent event) {
                   if (event is KeyDownEvent) {
                     // Check for Enter key without Shift
@@ -146,6 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   controller: _inputController,
                   focusNode: _inputFocus,
                   maxLines: 1, // Single line
+                  autofocus: true, // Always autofocus
                   style: const TextStyle(
                     fontSize: 16,
                     color: AppTheme.darkTextPrimary,

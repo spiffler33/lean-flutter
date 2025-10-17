@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/entry.dart';
+import '../theme/app_theme.dart';
 
 /// Entry widget with ASCII checkbox support
 /// Displays: □ for todo, ☑ for done
@@ -34,119 +35,92 @@ class EntryWidget extends StatelessWidget {
     final isDone = entry.isDone;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 1,
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Content with checkbox for todos
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ASCII checkbox for todos
-                if (isTodo)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Text(
-                      isDone ? '☑' : '□',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: isDone ? Colors.green : Colors.grey,
-                      ),
-                    ),
-                  ),
-
-                // Content
-                Expanded(
-                  child: Text(
-                    entry.content,
-                    style: TextStyle(
-                      fontSize: 16,
-                      decoration: isDone ? TextDecoration.lineThrough : null,
-                      color: isDone ? Colors.grey : null,
-                    ),
-                  ),
-                ),
-              ],
+            // Content
+            Text(
+              entry.content,
+              style: TextStyle(
+                fontSize: 16,
+                color: AppTheme.darkTextPrimary,
+                height: 1.5,
+                decoration: isDone ? TextDecoration.lineThrough : null,
+              ),
             ),
 
-            const SizedBox(height: 8),
+            // AI Badges (pill-shaped)
+            if (_hasAnyBadges())
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 4),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    // Emotion badge
+                    if (entry.emotion != null && entry.emotion!.isNotEmpty)
+                      AiBadge(
+                        label: entry.emotion!,
+                        type: AiBadgeType.mood,
+                      ),
 
-            // Metadata row
-            Row(
-              children: [
-                // Timestamp
-                Text(
-                  _formatTime(entry.createdAt),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                    // Theme badges
+                    ...entry.themes.map((theme) => AiBadge(
+                          label: theme,
+                          type: AiBadgeType.theme,
+                        )),
+
+                    // People badges
+                    ...entry.people.map((person) => AiBadge(
+                          label: person,
+                          type: AiBadgeType.people,
+                        )),
+
+                    // Urgency badge
+                    if (entry.urgency != 'none')
+                      AiBadge(
+                        label: entry.urgency,
+                        type: _getUrgencyBadgeType(entry.urgency),
+                      ),
+                  ],
                 ),
+              ),
 
-                const SizedBox(width: 12),
-
-                // Emotion indicator
-                if (entry.emotion != null && entry.emotion!.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '[${entry.emotion}]',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.blue[700],
-                      ),
-                    ),
-                  ),
-
-                const SizedBox(width: 6),
-
-                // Urgency indicator (if medium/high)
-                if (entry.urgency == 'medium' || entry.urgency == 'high')
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: entry.urgency == 'high' ? Colors.red[50] : Colors.orange[50],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '[!${entry.urgency}]',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: entry.urgency == 'high' ? Colors.red[700] : Colors.orange[700],
-                      ),
-                    ),
-                  ),
-
-                const Spacer(),
-
-                // Actions count
-                if (entry.actions.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.amber[50],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '[!${entry.actions.length}]',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.amber[800],
-                      ),
-                    ),
-                  ),
-              ],
+            // Timestamp
+            const SizedBox(height: 4),
+            Text(
+              _formatTime(entry.createdAt),
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppTheme.darkTextSecondary,
+              ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  bool _hasAnyBadges() {
+    return (entry.emotion != null && entry.emotion!.isNotEmpty) ||
+        entry.themes.isNotEmpty ||
+        entry.people.isNotEmpty ||
+        entry.urgency != 'none';
+  }
+
+  AiBadgeType _getUrgencyBadgeType(String urgency) {
+    switch (urgency) {
+      case 'low':
+        return AiBadgeType.urgencyLow;
+      case 'medium':
+        return AiBadgeType.urgencyMedium;
+      case 'high':
+        return AiBadgeType.urgencyHigh;
+      default:
+        return AiBadgeType.urgencyLow;
+    }
   }
 }

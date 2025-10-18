@@ -2,23 +2,29 @@ import 'dart:convert';
 
 /// Entry model matching existing Lean database schema
 class Entry {
-  final int? id; // Null for new entries not yet saved
+  final int? id; // Local SQLite ID (integer autoincrement)
+  final String? cloudId; // Supabase UUID (for sync)
+  final String? userId; // Supabase user ID (for sync)
+  final String? deviceId; // Device identifier (for sync)
   final String content;
   final DateTime createdAt;
   final List<String> tags;
   final List<String> actions;
-  final String? emotion;
+  final String? mood; // Changed from 'emotion' to match PWA/Supabase
   final List<String> themes;
   final List<String> people;
   final String urgency; // 'none', 'low', 'medium', 'high'
 
   Entry({
     this.id,
+    this.cloudId,
+    this.userId,
+    this.deviceId,
     required this.content,
     DateTime? createdAt,
     List<String>? tags,
     List<String>? actions,
-    this.emotion,
+    this.mood, // Renamed from emotion
     List<String>? themes,
     List<String>? people,
     this.urgency = 'none',
@@ -32,11 +38,14 @@ class Entry {
   factory Entry.fromJson(Map<String, dynamic> json) {
     return Entry(
       id: json['id'] as int?,
+      cloudId: json['cloud_id'] as String?,
+      userId: json['user_id'] as String?,
+      deviceId: json['device_id'] as String?,
       content: json['content'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       tags: _parseJsonList(json['tags']),
       actions: _parseJsonList(json['actions']),
-      emotion: json['emotion'] as String?,
+      mood: json['mood'] as String?, // Changed from emotion
       themes: _parseJsonList(json['themes']),
       people: _parseJsonList(json['people']),
       urgency: json['urgency'] as String? ?? 'none',
@@ -47,11 +56,14 @@ class Entry {
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
+      if (cloudId != null) 'cloud_id': cloudId,
+      if (userId != null) 'user_id': userId,
+      if (deviceId != null) 'device_id': deviceId,
       'content': content,
       'created_at': createdAt.toIso8601String(),
       'tags': jsonEncode(tags),
       'actions': jsonEncode(actions),
-      'emotion': emotion,
+      'mood': mood, // Changed from emotion
       'themes': jsonEncode(themes),
       'people': jsonEncode(people),
       'urgency': urgency,
@@ -61,22 +73,28 @@ class Entry {
   /// Create a copy with updated fields
   Entry copyWith({
     int? id,
+    String? cloudId,
+    String? userId,
+    String? deviceId,
     String? content,
     DateTime? createdAt,
     List<String>? tags,
     List<String>? actions,
-    String? emotion,
+    String? mood,
     List<String>? themes,
     List<String>? people,
     String? urgency,
   }) {
     return Entry(
       id: id ?? this.id,
+      cloudId: cloudId ?? this.cloudId,
+      userId: userId ?? this.userId,
+      deviceId: deviceId ?? this.deviceId,
       content: content ?? this.content,
       createdAt: createdAt ?? this.createdAt,
       tags: tags ?? this.tags,
       actions: actions ?? this.actions,
-      emotion: emotion ?? this.emotion,
+      mood: mood ?? this.mood, // Changed from emotion
       themes: themes ?? this.themes,
       people: people ?? this.people,
       urgency: urgency ?? this.urgency,

@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/entry_provider.dart';
 import 'services/database_service.dart';
+import 'services/supabase_service.dart';
+import 'providers/theme_provider.dart';
+import 'providers/auth_provider.dart';
 import 'screens/home_screen.dart';
-import 'theme/app_theme.dart';
+import 'screens/auth_screen.dart';
+import 'config/supabase_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,33 +18,74 @@ void main() async {
     await DatabaseService.instance.database;
   }
 
-  // TODO: Initialize Supabase (Phase 2)
-  // const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  // const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
-  // if (supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty) {
-  //   await SupabaseService.initialize(
-  //     url: supabaseUrl,
-  //     anonKey: supabaseAnonKey,
-  //   );
-  // }
+  // Initialize Supabase
+  SupabaseService? supabaseService;
+  if (SupabaseConfig.isConfigured) {
+    try {
+      await SupabaseService.initialize(
+        url: SupabaseConfig.url,
+        anonKey: SupabaseConfig.anonKey,
+      );
+      supabaseService = SupabaseService.instance;
+      debugPrint('✓ Supabase initialized');
+    } catch (e) {
+      debugPrint('⚠ Supabase init failed: $e');
+      // Continue without Supabase (offline-first architecture)
+    }
+  }
 
-  runApp(const LeanApp());
+  runApp(LeanApp(supabaseService: supabaseService));
 }
 
 class LeanApp extends StatelessWidget {
-  const LeanApp({super.key});
+  final SupabaseService? supabaseService;
+
+  const LeanApp({super.key, this.supabaseService});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => EntryProvider()..initialize(),
-      child: MaterialApp(
-        title: 'Lean',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme(), // Use exact PWA theme
-        darkTheme: AppTheme.darkTheme(),
-        themeMode: ThemeMode.dark, // Always dark for now
-        home: const HomeScreen(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider(supabaseService)),
+        ChangeNotifierProxyProvider<AuthProvider, EntryProvider>(
+          create: (_) => EntryProvider(),
+          update: (_, authProvider, entryProvider) {
+            // Initialize EntryProvider when authenticated
+            if (authProvider.isAuthenticated && supabaseService != null) {
+              entryProvider!.initialize(supabase: supabaseService);
+            }
+            return entryProvider!;
+          },
+        ),
+      ],
+      child: Consumer2<ThemeProvider, AuthProvider>(
+        builder: (context, themeProvider, authProvider, _) {
+          // Get the current theme colors
+          final colors = themeProvider.colors;
+
+          // Build a MaterialApp with the dynamic theme
+          return MaterialApp(
+            title: 'Lean',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              brightness: colors.background.computeLuminance() > 0.5
+                  ? Brightness.light
+                  : Brightness.dark,
+              scaffoldBackgroundColor: colors.background,
+              cardColor: colors.entryBackground,
+              primaryColor: colors.accent,
+              fontFamily: themeProvider.currentTheme == 'paper'
+                  ? 'serif' // Paper theme uses serif font
+                  : 'monospace', // All others use monospace
+            ),
+            home: authProvider.isLoading
+                ? Container() // Loading state
+                : authProvider.isAuthenticated
+                    ? const HomeScreen()
+                    : const AuthScreen(),
+          );
+        },
       ),
     );
   }

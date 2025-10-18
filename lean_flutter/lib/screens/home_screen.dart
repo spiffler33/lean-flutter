@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 import '../services/entry_provider.dart';
 import '../services/command_handler.dart';
 import '../widgets/entry_widget.dart';
-import '../theme/app_theme.dart';
+import '../providers/theme_provider.dart';
+import '../utils/time_divider.dart' as time_divider_util;
 
 /// Main screen: Input box + Entry list
 /// Philosophy: Frictionless. Type, save, search.
@@ -126,14 +127,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(maxWidth: 680),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        final colors = themeProvider.colors;
+
+        return Scaffold(
+          backgroundColor: colors.background,
+          body: Center(
+            child: Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(maxWidth: 680),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
                   const SizedBox(height: 10),
 
                   // Header: "L E A N" with line (matching original)
@@ -149,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               fontSize: 14,
                               fontWeight: FontWeight.w300,
                               letterSpacing: 8,
-                              color: Colors.white.withOpacity(0.4),
+                              color: colors.logoColor.withOpacity(0.4),
                             ),
                           ),
                           const Spacer(),
@@ -175,13 +181,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: isFiltered
-                                        ? AppTheme.accentGreen.withOpacity(0.2)
-                                        : AppTheme.darkInputBackground,
+                                        ? colors.accent.withOpacity(0.2)
+                                        : colors.inputBackground,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: isFiltered
-                                          ? AppTheme.accentGreen
-                                          : AppTheme.accentGreen.withOpacity(0.3),
+                                          ? colors.accent
+                                          : colors.accent.withOpacity(0.3),
                                       width: 1,
                                     ),
                                   ),
@@ -190,8 +196,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: isFiltered
-                                          ? AppTheme.accentGreen
-                                          : Colors.white.withOpacity(0.7),
+                                          ? colors.accent
+                                          : colors.textPrimary.withOpacity(0.7),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -207,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           fontSize: 10,
                           letterSpacing: 2,
-                          color: Colors.white.withOpacity(0.2),
+                          color: colors.timeDivider.withOpacity(0.2),
                         ),
                       ),
                     ],
@@ -231,17 +237,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                 'Showing: ${provider.filterLabel}',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.white.withOpacity(0.5),
+                                  color: colors.textSecondary.withOpacity(0.5),
                                 ),
                               ),
                             ),
                             TextButton(
                               onPressed: () => provider.clearFilter(),
-                              child: const Text(
+                              child: Text(
                                 'Clear (Esc)',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: AppTheme.accentGreen,
+                                  color: colors.accent,
                                 ),
                               ),
                             ),
@@ -256,25 +262,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     duration: const Duration(milliseconds: 300),
                     padding: const EdgeInsets.all(16), // Outer padding
                     decoration: BoxDecoration(
-                      color: AppTheme.darkEntryBackground, // #1a1a1a
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 3,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
+                      color: colors.inputContainer,
+                      borderRadius: BorderRadius.circular(
+                        themeProvider.currentTheme == 'mono' ? 0 : 12,
+                      ),
+                      boxShadow: themeProvider.currentTheme == 'mono'
+                          ? [] // No shadow for mono theme
+                          : [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 3,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
                     ),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppTheme.darkInputBackground, // #262626
-                        borderRadius: BorderRadius.circular(8),
+                        color: colors.inputBackground,
+                        borderRadius: BorderRadius.circular(colors.borderRadius),
                         border: Border.all(
                           color: _showSaveFlash
-                              ? AppTheme.accentGreen
-                              : AppTheme.darkBorderColor, // #404040
-                          width: 2,
+                              ? colors.accent
+                              : colors.inputBorder,
+                          width: colors.borderWidth,
                         ),
                       ),
                       padding: const EdgeInsets.all(12), // EXACT match: 12px all sides from CSS
@@ -286,15 +296,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         keyboardType: TextInputType.multiline,
                         autofocus: true,
                         textInputAction: TextInputAction.newline,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
-                          color: AppTheme.darkTextPrimary,
+                          color: colors.textPrimary,
                           height: 1.5, // Match CSS line-height
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'What\'s on your mind?',
                           hintStyle: TextStyle(
-                            color: AppTheme.darkTextSecondary,
+                            color: colors.textSecondary,
                           ),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
@@ -311,9 +321,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Consumer<EntryProvider>(
                       builder: (context, provider, _) {
                         if (provider.isLoading) {
-                          return const Center(
+                          return Center(
                             child: CircularProgressIndicator(
-                              color: AppTheme.accentGreen,
+                              color: colors.accent,
                             ),
                           );
                         }
@@ -327,51 +337,51 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                         }
 
-                        if (provider.entries.isEmpty) {
-                          return const Center(
-                            child: Text(
-                              'No entries yet.\nStart typing above!',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: AppTheme.darkTextSecondary,
-                                fontSize: 14,
-                              ),
-                            ),
-                          );
-                        }
-
+                        // Show ListView even when empty (to display time divider)
                         return ListView.builder(
                           padding: EdgeInsets.zero,
-                          itemCount: provider.entries.length,
+                          itemCount: provider.entries.length + (provider.showTimeDivider ? 1 : 0),
                           itemBuilder: (context, index) {
-                            final entry = provider.entries[index];
-
-                            // Check if we need a time divider (>2hr gap)
-                            bool showDivider = false;
-                            if (index > 0) {
-                              final prevEntry = provider.entries[index - 1];
-                              final timeDiff = prevEntry.createdAt.difference(entry.createdAt);
-                              showDivider = timeDiff.inHours >= 2;
+                            // Show time divider at the top if enabled
+                            if (index == 0 && provider.showTimeDivider) {
+                              final dividerText = time_divider_util.TimeDivider.createDividerElement(DateTime.now());
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 20),
+                                child: Text(
+                                  dividerText,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    letterSpacing: 1,
+                                    color: colors.timeDivider.withOpacity(0.4),
+                                    fontFamily: 'monospace',
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              );
                             }
 
-                            return Column(
-                              children: [
-                                // Time divider if needed
-                                if (showDivider)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 20),
-                                    child: Text(
-                                      '━━━━━━━━━',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        letterSpacing: 2,
-                                        color: Colors.white.withOpacity(0.3),
-                                      ),
-                                      textAlign: TextAlign.center,
+                            // If no entries, show empty state message after divider
+                            if (provider.entries.isEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 40),
+                                child: Center(
+                                  child: Text(
+                                    'No entries yet.\nStart typing above!',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: colors.textSecondary,
+                                      fontSize: 14,
                                     ),
                                   ),
-                                // Entry widget
-                                EntryWidget(
+                                ),
+                              );
+                            }
+
+                            // Adjust index if we showed divider
+                            final entryIndex = provider.showTimeDivider ? index - 1 : index;
+                            final entry = provider.entries[entryIndex];
+
+                            return EntryWidget(
                                   entry: entry,
                                   onToggleTodo: entry.isTodo
                                       ? () => provider.toggleTodo(entry)
@@ -386,21 +396,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                     final confirmed = await showDialog<bool>(
                                       context: context,
                                       builder: (context) => AlertDialog(
-                                        backgroundColor: AppTheme.darkEntryBackground,
-                                        title: const Text(
+                                        backgroundColor: colors.modalBackground,
+                                        title: Text(
                                           'Delete Entry?',
-                                          style: TextStyle(color: AppTheme.darkTextPrimary),
+                                          style: TextStyle(color: colors.textPrimary),
                                         ),
-                                        content: const Text(
+                                        content: Text(
                                           'This action cannot be undone.',
-                                          style: TextStyle(color: AppTheme.darkTextSecondary),
+                                          style: TextStyle(color: colors.textSecondary),
                                         ),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(false),
-                                            child: const Text(
+                                            child: Text(
                                               'Cancel',
-                                              style: TextStyle(color: AppTheme.darkTextSecondary),
+                                              style: TextStyle(color: colors.textSecondary),
                                             ),
                                           ),
                                           TextButton(
@@ -418,18 +428,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                       await provider.deleteEntry(entryToDelete.id!);
                                     }
                                   },
-                                ),
-                              ],
-                            );
+                                );
                           },
                         );
                       },
                     ),
                   ),
                 ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

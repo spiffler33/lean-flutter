@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/entry.dart';
 import '../widgets/export_modal.dart';
+import '../providers/theme_provider.dart';
+import '../theme/theme_colors.dart';
 import 'entry_provider.dart';
 
 /// Command handler for /commands like /help, /search, /today, etc.
@@ -242,85 +245,255 @@ class CommandHandler {
     _showNotification('Found ${results.length} results');
   }
 
-  /// /clear - Clear current view and filters
+  /// /clear - Clear current view (PWA: clears displayed entries, shows time divider)
   Future<void> _handleClear() async {
-    provider.clearFilter();
+    provider.clearView(); // Clear displayed entries (matching PWA behavior)
     _showNotification('View cleared');
   }
 
-  /// /stats - Show statistics modal
+  /// /stats - Show comprehensive statistics modal (matches PWA)
   Future<void> _handleStats() async {
-    final totalEntries = await provider.getEntryCount();
-    final todayEntries = await provider.getTodayEntries();
+    final entries = provider.entries;
+
+    if (entries.isEmpty) {
+      _showNotification('No entries yet. Start writing!');
+      return;
+    }
 
     if (!context.mounted) return;
 
+    // Calculate all stats
+    final stats = _calculateStats(entries);
+    final statsDisplay = _formatStatsDisplay(stats);
+
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text(
-          '▊ Stats',
-          style: TextStyle(
-            color: Color(0xFFE4E4E7),
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildStatRow('Total Entries', '$totalEntries'),
-            _buildStatRow('Today', '${todayEntries.length}'),
-            const SizedBox(height: 12),
-            const Text(
-              'More stats coming soon!',
+      builder: (context) => Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          final colors = themeProvider.colors;
+
+          return AlertDialog(
+            backgroundColor: colors.modalBackground,
+            title: Text(
+              '▊ Stats',
               style: TextStyle(
-                color: Color(0xFF71717A),
-                fontSize: 13,
-                fontStyle: FontStyle.italic,
+                color: colors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
               ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              'Close',
-              style: TextStyle(color: Color(0xFF4CAF50)),
+            content: SizedBox(
+              width: 600,
+              child: SingleChildScrollView(
+                child: Text(
+                  statsDisplay,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    color: colors.textPrimary,
+                    height: 1.6,
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  'Close',
+                  style: TextStyle(color: colors.accent),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildStatRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF71717A),
-              fontSize: 14,
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFFE4E4E7),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+  /// Calculate statistics from entries (matches PWA calculateStats)
+  Map<String, dynamic> _calculateStats(List<Entry> entries) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final weekAgo = today.subtract(const Duration(days: 7));
+    final monthAgo = today.subtract(const Duration(days: 30));
+
+    // Counts
+    final todayCount = entries.where((e) => e.createdAt.isAfter(today)).length;
+    final weekCount = entries.where((e) => e.createdAt.isAfter(weekAgo)).length;
+    final monthCount = entries.where((e) => e.createdAt.isAfter(monthAgo)).length;
+
+    // Words
+    final totalWords = entries.fold<int>(0, (sum, e) => sum + e.content.split(RegExp(r'\s+')).length);
+    final avgWords = entries.isNotEmpty ? (totalWords / entries.length).round() : 0;
+
+    // Activity for last 7 days
+    final activity7days = <Map<String, dynamic>>[];
+    for (int i = 6; i >= 0; i--) {
+      final day = today.subtract(Duration(days: i));
+      final nextDay = day.add(const Duration(days: 1));
+      final count = entries.where((e) => e.createdAt.isAfter(day) && e.createdAt.isBefore(nextDay)).length;
+      activity7days.add({
+        'day': _getDayName(day),
+        'count': count,
+      });
+    }
+
+    // Top tags
+    final tagCounts = <String, int>{};
+    for (final entry in entries) {
+      final tags = RegExp(r'#(\w+)').allMatches(entry.content);
+      for (final match in tags) {
+        final tag = match.group(0)!;
+        tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
+      }
+    }
+    final topTags = tagCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final top5Tags = topTags.take(5).toList();
+
+    // 30-day heatmap
+    final heatmap = <int>[];
+    for (int i = 29; i >= 0; i--) {
+      final day = today.subtract(Duration(days: i));
+      final nextDay = day.add(const Duration(days: 1));
+      final count = entries.where((e) => e.createdAt.isAfter(day) && e.createdAt.isBefore(nextDay)).length;
+      heatmap.add(count);
+    }
+
+    // Streak calculation
+    int currentStreak = 0;
+    int longestStreak = 0;
+    var checkDate = DateTime(today.year, today.month, today.day);
+
+    while (true) {
+      final nextDay = checkDate.add(const Duration(days: 1));
+      final hasEntry = entries.any((e) => e.createdAt.isAfter(checkDate) && e.createdAt.isBefore(nextDay));
+      if (hasEntry) {
+        currentStreak++;
+        longestStreak = longestStreak > currentStreak ? longestStreak : currentStreak;
+        checkDate = checkDate.subtract(const Duration(days: 1));
+      } else {
+        break;
+      }
+    }
+
+    // Best day
+    final dayCounts = <String, int>{};
+    for (final entry in entries) {
+      final dayKey = '${entry.createdAt.year}-${entry.createdAt.month}-${entry.createdAt.day}';
+      dayCounts[dayKey] = (dayCounts[dayKey] ?? 0) + 1;
+    }
+    final bestDayEntry = dayCounts.entries.isEmpty
+        ? null
+        : dayCounts.entries.reduce((a, b) => a.value > b.value ? a : b);
+    final bestDay = bestDayEntry != null ? '${bestDayEntry.value} entries' : '0 entries';
+
+    // Trend
+    final weekAvg = weekCount / 7;
+    final monthAvg = monthCount / 30;
+    final trend = weekAvg > monthAvg ? '▲ Up' : '▼ Down';
+
+    return {
+      'total_entries': entries.length,
+      'today_count': todayCount,
+      'week_count': weekCount,
+      'month_count': monthCount,
+      'total_words': totalWords,
+      'daily_avg': avgWords,
+      'best_day': bestDay,
+      'activity_7days': activity7days,
+      'top_tags': top5Tags,
+      'heatmap': heatmap,
+      'current_streak': currentStreak,
+      'longest_streak': longestStreak,
+      'trend': trend,
+    };
+  }
+
+  String _getDayName(DateTime date) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[date.weekday - 1];
+  }
+
+  /// Format stats display (matches PWA formatStatsDisplay)
+  String _formatStatsDisplay(Map<String, dynamic> data) {
+    String fmt(int n) => n.toString().replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (match) => '${match[1]},',
     );
+
+    // Activity bars
+    final activity7days = data['activity_7days'] as List<Map<String, dynamic>>;
+    final maxCount = activity7days.map((d) => d['count'] as int).reduce((a, b) => a > b ? a : b);
+    final activityBars = activity7days.map((d) {
+      final count = d['count'] as int;
+      final barLength = maxCount > 0 ? (count / maxCount * 20).round() : 0;
+      final bar = barLength > 0 ? '█' * barLength : '▁';
+      return '   ${d['day']} $bar ($count)';
+    }).join('\n');
+
+    // Heatmap
+    const heatChars = ['□','▤','▥','▦','▧','▨','▩','█'];
+    final heatmapData = data['heatmap'] as List<int>;
+    final maxHeat = heatmapData.isEmpty ? 0 : heatmapData.reduce((a, b) => a > b ? a : b);
+    final heatmap = heatmapData.map((count) {
+      if (count == 0) return heatChars[0];
+      final level = ((count / (maxHeat > 0 ? maxHeat : 1)) * 7).ceil().clamp(0, 7);
+      return heatChars[level];
+    }).join('');
+
+    // Top tags
+    final topTags = data['top_tags'] as List<MapEntry<String, int>>;
+    final maxTagCount = topTags.isEmpty ? 0 : topTags.first.value;
+    const nums = ['①','②','③','④','⑤'];
+    final tagBars = topTags.isEmpty
+        ? '   No tags yet'
+        : topTags.asMap().entries.map((entry) {
+            final i = entry.key;
+            final tag = entry.value;
+            final num = i < nums.length ? nums[i] : '•';
+            final barLength = maxTagCount > 0 ? (tag.value / maxTagCount * 12).round() : 0;
+            final bar = barLength > 0 ? '█' * barLength : '';
+            final tagName = tag.key.padRight(10);
+            return '   $num $tagName $bar (${tag.value})';
+          }).join('\n');
+
+    // Streak arrows
+    final currentStreak = data['current_streak'] as int;
+    final longestStreak = data['longest_streak'] as int;
+    final streakArrows = currentStreak > 0 ? '▲' * (currentStreak.clamp(0, 10)) : '';
+
+    return '''
+╔═══════════════════════════════════════╗
+║      ▊ Your Thought Patterns          ║
+╚═══════════════════════════════════════╝
+
+STREAK
+   Current Streak: $streakArrows $currentStreak day${currentStreak != 1 ? 's' : ''}
+   Longest Streak: ★ $longestStreak day${longestStreak != 1 ? 's' : ''}
+
+STATS OVERVIEW
+   Entries ··········· ${fmt(data['total_entries'])}
+   Today ············· ${data['today_count']}
+   This Week ········· ${data['week_count']}
+   This Month ········ ${data['month_count']}
+   Total Words ······· ${fmt(data['total_words'])}
+   Daily Average ····· ${data['daily_avg']}
+   Best Day ·········· ${data['best_day']}
+
+ACTIVITY (Last 7 days)
+$activityBars
+
+TOP TAGS
+$tagBars
+
+30-DAY HEATMAP
+   Last 30 days: $heatmap
+
+TREND
+   Productivity: ${data['trend']} this week
+''';
   }
 
   /// /export - Show export dialog
@@ -345,26 +518,120 @@ class CommandHandler {
     _showNotification('Idea template inserted');
   }
 
-  /// /theme [name] - Change theme
+  /// /theme [name] - Change theme (matches PWA handleTheme lines 649-665)
   Future<void> _handleTheme(String command) async {
     final parts = command.split(' ');
+
+    // No theme name provided - show current theme and options
     if (parts.length < 2) {
-      _showThemeInfo();
+      await _showThemeInfo();
       return;
     }
 
     final themeName = parts[1].toLowerCase();
-    final validThemes = ['dark', 'matrix', 'paper', 'midnight', 'mono'];
 
-    if (validThemes.contains(themeName)) {
-      _showNotification('Theme: $themeName (theming system coming soon!)');
+    // Check if theme is valid (matches line 655 of main.ts)
+    if (LeanThemes.validThemes.contains(themeName)) {
+      // Get theme provider and apply theme (matches applyTheme function)
+      final themeProvider = context.read<ThemeProvider>();
+      await themeProvider.applyTheme(themeName);
+      _showNotification('Theme switched to $themeName');
     } else {
-      _showThemeInfo();
+      // Invalid theme - show available options
+      await _showThemeOptions();
     }
   }
 
-  void _showThemeInfo() {
-    _showNotification('Available themes: dark, matrix, paper, midnight, mono');
+  /// Show current theme and options (matches showThemeInfo from main.ts)
+  Future<void> _showThemeInfo() async {
+    final themeProvider = context.read<ThemeProvider>();
+
+    if (!context.mounted) return;
+
+    // Show current theme info like PWA
+    await showDialog(
+      context: context,
+      builder: (context) => Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          final colors = themeProvider.colors;
+
+          return AlertDialog(
+            backgroundColor: colors.modalBackground,
+            title: Text(
+              '▪ Current theme: ${themeProvider.currentTheme}',
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 8),
+                  Text(
+                    'Available themes:',
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildThemeOption(colors, 'minimal', 'Clean and minimal (default)'),
+                  _buildThemeOption(colors, 'matrix', 'Green phosphor terminal'),
+                  _buildThemeOption(colors, 'paper', 'Warm paper-like colors'),
+                  _buildThemeOption(colors, 'midnight', 'Deep blues and purples'),
+                  _buildThemeOption(colors, 'mono', 'Pure black and white'),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  'Close',
+                  style: TextStyle(color: colors.accent),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// Show theme options (matches showThemeOptions from main.ts)
+  Future<void> _showThemeOptions() async {
+    await _showThemeInfo(); // Same dialog
+  }
+
+  Widget _buildThemeOption(ThemeColors colors, String name, String description) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: RichText(
+        text: TextSpan(
+          style: TextStyle(fontSize: 13, color: colors.textPrimary),
+          children: [
+            TextSpan(
+              text: '/theme $name',
+              style: TextStyle(
+                color: colors.accent,
+                fontFamily: 'monospace',
+              ),
+            ),
+            TextSpan(
+              text: ' - $description',
+              style: TextStyle(
+                color: colors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showNotification(String message) {

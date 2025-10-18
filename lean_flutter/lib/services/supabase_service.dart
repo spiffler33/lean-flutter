@@ -1,6 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/entry.dart';
 
+// Re-export auth types for convenience
+export 'package:supabase_flutter/supabase_flutter.dart' show User, AuthResponse;
+
 /// Supabase service for cloud sync and authentication
 class SupabaseService {
   static SupabaseService? _instance;
@@ -30,10 +33,38 @@ class SupabaseService {
   /// Get current user ID
   String? get userId => _client.auth.currentUser?.id;
 
-  /// Sign in anonymously
-  Future<void> signInAnonymously() async {
-    final response = await _client.auth.signInAnonymously();
-    _userId = response.user?.id;
+  /// Get current user
+  Future<User?> getCurrentUser() async {
+    final response = await _client.auth.getUser();
+    return response.user;
+  }
+
+  /// Sign up with email and password
+  Future<AuthResponse> signUp(String email, String password) async {
+    final response = await _client.auth.signUp(
+      email: email,
+      password: password,
+    );
+
+    if (response.user != null) {
+      _userId = response.user!.id;
+    }
+
+    return response;
+  }
+
+  /// Sign in with email and password
+  Future<AuthResponse> signIn(String email, String password) async {
+    final response = await _client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+
+    if (response.user != null) {
+      _userId = response.user!.id;
+    }
+
+    return response;
   }
 
   /// Sign out
@@ -42,10 +73,23 @@ class SupabaseService {
     _userId = null;
   }
 
+  /// Send password reset email
+  Future<void> resetPassword(String email) async {
+    await _client.auth.resetPasswordForEmail(email);
+  }
+
+  /// Listen to auth state changes
+  Stream<User?> onAuthStateChange() {
+    return _client.auth.onAuthStateChange.map((data) => data.session?.user);
+  }
+
   /// Create entry in Supabase
   Future<Entry> createEntry(Entry entry) async {
     final data = entry.toJson();
     data['user_id'] = userId; // Add user_id for RLS
+    data['device_id'] = entry.deviceId ?? 'flutter_app'; // Add device_id
+    data.remove('id'); // Remove local SQLite ID
+    data.remove('cloud_id'); // Let Supabase generate UUID
 
     final response = await _client
         .from('entries')
@@ -58,29 +102,31 @@ class SupabaseService {
 
   /// Update entry in Supabase
   Future<Entry> updateEntry(Entry entry) async {
-    if (entry.id == null) {
-      throw Exception('Cannot update entry without ID');
+    if (entry.cloudId == null) {
+      throw Exception('Cannot update entry without cloud ID');
     }
 
     final data = entry.toJson();
     data['user_id'] = userId;
+    data['device_id'] = entry.deviceId ?? 'flutter_app';
+    data.remove('id'); // Remove local SQLite ID
 
     final response = await _client
         .from('entries')
         .update(data)
-        .eq('id', entry.id!)
+        .eq('id', entry.cloudId!)
         .select()
         .single();
 
     return Entry.fromJson(response);
   }
 
-  /// Delete entry from Supabase
-  Future<void> deleteEntry(int entryId) async {
+  /// Delete entry from Supabase (by cloud UUID)
+  Future<void> deleteEntry(String cloudId) async {
     await _client
         .from('entries')
         .delete()
-        .eq('id', entryId);
+        .eq('id', cloudId);
   }
 
   /// Fetch all entries for current user

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/entry.dart';
-import '../theme/app_theme.dart';
+import '../providers/theme_provider.dart';
 
 /// Export modal matching original PWA design
 /// Features: date range, tag filter, markdown/write.as formats, copy to clipboard
@@ -29,8 +30,12 @@ class _ExportModalState extends State<ExportModal> {
     final filteredEntries = _getFilteredEntries();
     final exportContent = _generateExportContent(filteredEntries);
 
-    return Dialog(
-      backgroundColor: AppTheme.darkEntryBackground,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        final colors = themeProvider.colors;
+
+        return Dialog(
+          backgroundColor: colors.modalBackground,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
         child: Column(
@@ -42,7 +47,7 @@ class _ExportModalState extends State<ExportModal> {
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: AppTheme.darkBorderColor,
+                    color: colors.entryBorder.withOpacity(0.2),
                     width: 1,
                   ),
                 ),
@@ -50,18 +55,18 @@ class _ExportModalState extends State<ExportModal> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Export Entries',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
-                      color: AppTheme.darkTextPrimary,
+                      color: colors.textPrimary,
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.of(context).pop(),
-                    color: AppTheme.darkTextSecondary,
+                    color: colors.textSecondary,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -79,32 +84,32 @@ class _ExportModalState extends State<ExportModal> {
                     // Date Range Selector
                     Row(
                       children: [
-                        const SizedBox(
+                        SizedBox(
                           width: 100,
                           child: Text(
                             'Date Range:',
                             style: TextStyle(
                               fontSize: 13,
-                              color: AppTheme.darkTextSecondary,
+                              color: colors.textSecondary,
                             ),
                           ),
                         ),
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             value: _dateRange,
-                            dropdownColor: AppTheme.darkInputBackground,
-                            style: const TextStyle(
+                            dropdownColor: colors.inputBackground,
+                            style: TextStyle(
                               fontSize: 13,
-                              color: AppTheme.darkTextPrimary,
+                              color: colors.textPrimary,
                             ),
                             decoration: InputDecoration(
                               isDense: true,
                               filled: true,
-                              fillColor: AppTheme.darkInputBackground,
+                              fillColor: colors.inputBackground,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(6),
                                 borderSide: BorderSide(
-                                  color: AppTheme.darkBorderColor,
+                                  color: colors.inputBorder,
                                 ),
                               ),
                               contentPadding: const EdgeInsets.symmetric(
@@ -145,13 +150,13 @@ class _ExportModalState extends State<ExportModal> {
                     // Tag Filter
                     Row(
                       children: [
-                        const SizedBox(
+                        SizedBox(
                           width: 100,
                           child: Text(
                             'Filter by tag:',
                             style: TextStyle(
                               fontSize: 13,
-                              color: AppTheme.darkTextSecondary,
+                              color: colors.textSecondary,
                             ),
                           ),
                         ),
@@ -162,22 +167,22 @@ class _ExportModalState extends State<ExportModal> {
                                 _tagFilter = value;
                               });
                             },
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: AppTheme.darkTextPrimary,
+                              color: colors.textPrimary,
                             ),
                             decoration: InputDecoration(
                               hintText: 'e.g., #work (optional)',
-                              hintStyle: const TextStyle(
-                                color: AppTheme.darkTextSecondary,
+                              hintStyle: TextStyle(
+                                color: colors.textSecondary,
                               ),
                               isDense: true,
                               filled: true,
-                              fillColor: AppTheme.darkInputBackground,
+                              fillColor: colors.inputBackground,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(6),
                                 borderSide: BorderSide(
-                                  color: AppTheme.darkBorderColor,
+                                  color: colors.inputBorder,
                                 ),
                               ),
                               contentPadding: const EdgeInsets.symmetric(
@@ -202,13 +207,13 @@ class _ExportModalState extends State<ExportModal> {
                               _includeTimestamps = value!;
                             });
                           },
-                          activeColor: AppTheme.accentGreen,
+                          activeColor: colors.accent,
                         ),
-                        const Text(
+                        Text(
                           'Include timestamps',
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppTheme.darkTextPrimary,
+                            color: colors.textPrimary,
                           ),
                         ),
                       ],
@@ -228,17 +233,17 @@ class _ExportModalState extends State<ExportModal> {
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _format == 'markdown'
-                                  ? AppTheme.accentGreen
-                                  : AppTheme.darkInputBackground,
+                                  ? colors.accent
+                                  : colors.inputBackground,
                               foregroundColor: _format == 'markdown'
-                                  ? Colors.black
-                                  : AppTheme.darkTextPrimary,
+                                  ? colors.background
+                                  : colors.textPrimary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(6),
                                 side: BorderSide(
                                   color: _format == 'markdown'
-                                      ? AppTheme.accentGreen
-                                      : AppTheme.darkBorderColor,
+                                      ? colors.accent
+                                      : colors.inputBorder,
                                 ),
                               ),
                             ),
@@ -255,17 +260,17 @@ class _ExportModalState extends State<ExportModal> {
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _format == 'writeas'
-                                  ? AppTheme.accentGreen
-                                  : AppTheme.darkInputBackground,
+                                  ? colors.accent
+                                  : colors.inputBackground,
                               foregroundColor: _format == 'writeas'
-                                  ? Colors.black
-                                  : AppTheme.darkTextPrimary,
+                                  ? colors.background
+                                  : colors.textPrimary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(6),
                                 side: BorderSide(
                                   color: _format == 'writeas'
-                                      ? AppTheme.accentGreen
-                                      : AppTheme.darkBorderColor,
+                                      ? colors.accent
+                                      : colors.inputBorder,
                                 ),
                               ),
                             ),
@@ -282,17 +287,17 @@ class _ExportModalState extends State<ExportModal> {
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppTheme.darkInputBackground,
+                          color: colors.inputBackground,
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: AppTheme.darkBorderColor,
+                            color: colors.inputBorder,
                           ),
                         ),
                         child: SelectableText(
                           exportContent,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
-                            color: AppTheme.darkTextPrimary,
+                            color: colors.textPrimary,
                             fontFamily: 'monospace',
                             height: 1.5,
                           ),
@@ -310,7 +315,7 @@ class _ExportModalState extends State<ExportModal> {
               decoration: BoxDecoration(
                 border: Border(
                   top: BorderSide(
-                    color: AppTheme.darkBorderColor,
+                    color: colors.entryBorder.withOpacity(0.2),
                     width: 1,
                   ),
                 ),
@@ -320,17 +325,17 @@ class _ExportModalState extends State<ExportModal> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text(
+                    child: Text(
                       'Close',
-                      style: TextStyle(color: AppTheme.darkTextSecondary),
+                      style: TextStyle(color: colors.textSecondary),
                     ),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () => _copyToClipboard(exportContent),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.accentGreen,
-                      foregroundColor: Colors.black,
+                      backgroundColor: colors.accent,
+                      foregroundColor: colors.background,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
                       ),
@@ -343,6 +348,8 @@ class _ExportModalState extends State<ExportModal> {
           ],
         ),
       ),
+        );
+      },
     );
   }
 
@@ -436,11 +443,12 @@ class _ExportModalState extends State<ExportModal> {
     await Clipboard.setData(ClipboardData(text: content));
 
     if (mounted) {
+      final colors = context.read<ThemeProvider>().colors;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Copied to clipboard!'),
-          backgroundColor: AppTheme.accentGreen,
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: const Text('Copied to clipboard!'),
+          backgroundColor: colors.accent,
+          duration: const Duration(seconds: 2),
         ),
       );
     }

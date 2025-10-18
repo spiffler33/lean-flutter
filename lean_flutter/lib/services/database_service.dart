@@ -47,12 +47,15 @@ class DatabaseService {
         created_at TEXT NOT NULL,
         tags TEXT,
         actions TEXT DEFAULT '[]',
-        emotion TEXT,
+        mood TEXT,
         themes TEXT DEFAULT '[]',
         people TEXT DEFAULT '[]',
         urgency TEXT DEFAULT 'none',
         synced INTEGER DEFAULT 0,
-        remote_id INTEGER
+        remote_id INTEGER,
+        cloud_id TEXT,
+        user_id TEXT,
+        device_id TEXT
       )
     ''');
 

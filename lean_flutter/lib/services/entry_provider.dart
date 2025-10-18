@@ -15,12 +15,14 @@ class EntryProvider with ChangeNotifier {
   String? _error;
   Timer? _syncTimer;
   String? _filterLabel; // Label for active filter (e.g., "today's entries")
+  bool _showTimeDivider = true; // Show time divider on app load (PWA behavior)
 
   List<Entry> get entries => _entries;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isOnline => _supabase?.isAuthenticated ?? false;
   String? get filterLabel => _filterLabel;
+  bool get showTimeDivider => _showTimeDivider;
 
   /// Initialize with optional Supabase
   Future<void> initialize({SupabaseService? supabase}) async {
@@ -42,8 +44,9 @@ class EntryProvider with ChangeNotifier {
       notifyListeners();
 
       _allEntries = await _db.getEntries();
-      _entries = _allEntries;
+      _entries = List.from(_allEntries); // Create a copy to avoid duplicates
       _filterLabel = null; // Clear any filter
+      _showTimeDivider = true; // Show divider after loading (PWA: indicates refresh)
 
       _isLoading = false;
       _error = null;
@@ -58,14 +61,23 @@ class EntryProvider with ChangeNotifier {
   /// Create entry (optimistic UI)
   Future<Entry> createEntry(String content) async {
     try {
+      // Hide time divider (PWA: user is writing, session continues)
+      _showTimeDivider = false;
+
       // Create temporary entry
       final tempEntry = Entry(
         content: content,
         createdAt: DateTime.now(),
       );
 
-      // Add to UI immediately (optimistic)
-      _entries.insert(0, tempEntry);
+      // Add to allEntries (source of truth)
+      _allEntries.insert(0, tempEntry);
+
+      // Update displayed entries only if no filter is active
+      if (_filterLabel == null) {
+        _entries.insert(0, tempEntry);
+      }
+
       notifyListeners();
 
       // Save to local database
@@ -73,12 +85,21 @@ class EntryProvider with ChangeNotifier {
       final savedEntry = await _db.getEntry(localId);
 
       if (savedEntry != null) {
-        // Update UI with entry that has ID
-        final index = _entries.indexWhere((e) => e.id == null);
-        if (index != -1) {
-          _entries[index] = savedEntry;
-          notifyListeners();
+        // Update in allEntries
+        final allIndex = _allEntries.indexWhere((e) => e.id == null);
+        if (allIndex != -1) {
+          _allEntries[allIndex] = savedEntry;
         }
+
+        // Update in displayed entries if no filter
+        if (_filterLabel == null) {
+          final index = _entries.indexWhere((e) => e.id == null);
+          if (index != -1) {
+            _entries[index] = savedEntry;
+          }
+        }
+
+        notifyListeners();
 
         // Sync to Supabase in background
         if (_supabase != null && _supabase!.isAuthenticated) {
@@ -101,12 +122,19 @@ class EntryProvider with ChangeNotifier {
     try {
       await _db.updateEntry(entry);
 
-      // Update in local list
+      // Update in allEntries
+      final allIndex = _allEntries.indexWhere((e) => e.id == entry.id);
+      if (allIndex != -1) {
+        _allEntries[allIndex] = entry;
+      }
+
+      // Update in displayed entries
       final index = _entries.indexWhere((e) => e.id == entry.id);
       if (index != -1) {
         _entries[index] = entry;
-        notifyListeners();
       }
+
+      notifyListeners();
 
       // Sync to cloud
       if (_supabase != null && _supabase!.isAuthenticated) {
@@ -122,15 +150,19 @@ class EntryProvider with ChangeNotifier {
   /// Delete entry
   Future<void> deleteEntry(int id) async {
     try {
+      // Find entry to get cloud ID before deleting
+      final entryToDelete = _allEntries.firstWhere((e) => e.id == id, orElse: () => throw Exception('Entry not found'));
+
       await _db.deleteEntry(id);
 
-      // Remove from local list
+      // Remove from BOTH local lists
       _entries.removeWhere((e) => e.id == id);
+      _allEntries.removeWhere((e) => e.id == id);
       notifyListeners();
 
-      // Delete from cloud
-      if (_supabase != null && _supabase!.isAuthenticated) {
-        await _supabase!.deleteEntry(id);
+      // Delete from cloud if it has been synced
+      if (_supabase != null && _supabase!.isAuthenticated && entryToDelete.cloudId != null) {
+        await _supabase!.deleteEntry(entryToDelete.cloudId!);
       }
     } catch (e) {
       _error = e.toString();
@@ -301,6 +333,26 @@ class EntryProvider with ChangeNotifier {
 
     // Reload to refresh the list
     await loadEntries();
+  }
+
+  /// Show time divider (for /clear command)
+  void enableTimeDivider() {
+    _showTimeDivider = true;
+    notifyListeners();
+  }
+
+  /// Hide time divider
+  void disableTimeDivider() {
+    _showTimeDivider = false;
+    notifyListeners();
+  }
+
+  /// Clear view (for /clear command) - clears displayed entries without deleting from database
+  void clearView() {
+    _entries = []; // Clear displayed entries
+    _filterLabel = null; // Clear any filter
+    _showTimeDivider = true; // Show time divider
+    notifyListeners();
   }
 
   @override

@@ -36,23 +36,39 @@ class Entry {
 
   /// Create Entry from SQLite or Supabase row
   factory Entry.fromJson(Map<String, dynamic> json) {
+    // Handle id field - can be int (SQLite) or String UUID (Supabase)
+    int? localId;
+    String? cloudUuid;
+
+    final idValue = json['id'];
+    if (idValue is int) {
+      localId = idValue; // SQLite local ID
+    } else if (idValue is String) {
+      cloudUuid = idValue; // Supabase UUID
+    }
+
+    // Also check explicit cloud_id field
+    if (json['cloud_id'] != null) {
+      cloudUuid = json['cloud_id'] as String;
+    }
+
     return Entry(
-      id: json['id'] as int?,
-      cloudId: json['cloud_id'] as String?,
+      id: localId,
+      cloudId: cloudUuid,
       userId: json['user_id'] as String?,
       deviceId: json['device_id'] as String?,
       content: json['content'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       tags: _parseJsonList(json['tags']),
       actions: _parseJsonList(json['actions']),
-      mood: json['mood'] as String?, // Changed from emotion
+      mood: json['mood'] as String?,
       themes: _parseJsonList(json['themes']),
       people: _parseJsonList(json['people']),
       urgency: json['urgency'] as String? ?? 'none',
     );
   }
 
-  /// Convert Entry to JSON for Supabase/SQLite
+  /// Convert Entry to JSON for SQLite (arrays as JSON strings)
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
@@ -66,6 +82,24 @@ class Entry {
       'mood': mood, // Changed from emotion
       'themes': jsonEncode(themes),
       'people': jsonEncode(people),
+      'urgency': urgency,
+    };
+  }
+
+  /// Convert Entry to JSON for Supabase (arrays as actual arrays)
+  Map<String, dynamic> toSupabaseJson() {
+    return {
+      if (id != null) 'id': id,
+      if (cloudId != null) 'cloud_id': cloudId,
+      if (userId != null) 'user_id': userId,
+      if (deviceId != null) 'device_id': deviceId,
+      'content': content,
+      'created_at': createdAt.toIso8601String(),
+      'tags': tags, // Direct array for PostgreSQL
+      'actions': actions, // Direct array for PostgreSQL
+      'mood': mood,
+      'themes': themes, // Direct array for PostgreSQL
+      'people': people, // Direct array for PostgreSQL
       'urgency': urgency,
     };
   }

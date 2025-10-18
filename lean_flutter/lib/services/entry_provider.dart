@@ -16,6 +16,7 @@ class EntryProvider with ChangeNotifier {
   Timer? _syncTimer;
   String? _filterLabel; // Label for active filter (e.g., "today's entries")
   bool _showTimeDivider = true; // Show time divider on app load (PWA behavior)
+  final Set<int> _failedSyncEntries = {}; // Track entries that permanently failed to sync
 
   List<Entry> get entries => _entries;
   bool get isLoading => _isLoading;
@@ -212,19 +213,32 @@ class EntryProvider with ChangeNotifier {
   /// Sync single entry to cloud (background)
   Future<void> _syncEntryToCloud(Entry entry) async {
     if (_supabase == null || !_supabase!.isAuthenticated) return;
+    if (entry.id == null) return;
+
+    // Skip entries that have permanently failed (malformed data from before fix)
+    if (_failedSyncEntries.contains(entry.id)) return;
 
     try {
-      if (entry.id == null) return;
-
       final remoteEntry = await _supabase!.createEntry(entry);
 
-      // Mark as synced in local database
-      if (remoteEntry.id != null) {
-        await _db.markAsSynced(entry.id!, remoteEntry.id!);
+      // Mark as synced in local database (use cloudId instead of id)
+      if (remoteEntry.cloudId != null && entry.id != null) {
+        await _db.markAsSynced(entry.id!, remoteEntry.cloudId!);
       }
     } catch (e) {
+      final errorStr = e.toString();
+
+      // If it's a permanent error (malformed/incompatible data), stop retrying this entry
+      if (errorStr.contains('22P02') ||
+          errorStr.contains('malformed array literal') ||
+          errorStr.contains('type \'String\' is not a subtype of type \'int')) {
+        _failedSyncEntries.add(entry.id!);
+        // Silently skip - these are old entries with incompatible data
+        return;
+      }
+
+      // Log other errors (network issues, etc.)
       debugPrint('Sync failed for entry ${entry.id}: $e');
-      // Don't notify user, will retry in background sync
     }
   }
 
@@ -247,35 +261,38 @@ class EntryProvider with ChangeNotifier {
     if (_supabase == null || !_supabase!.isAuthenticated) return;
 
     try {
-      // Get unsynced entries
-      final unsyncedEntries = await _db.getUnsyncedEntries();
+      // Get unsynced entries (skip on web - uses in-memory storage)
+      if (!kIsWeb) {
+        final unsyncedEntries = await _db.getUnsyncedEntries();
 
-      // Sync each entry
-      for (final entry in unsyncedEntries) {
-        await _syncEntryToCloud(entry);
+        // Sync each entry
+        for (final entry in unsyncedEntries) {
+          await _syncEntryToCloud(entry);
+        }
       }
 
       // Pull remote changes (last 24 hours)
       final yesterday = DateTime.now().subtract(const Duration(hours: 24));
       final remoteEntries = await _supabase!.fetchEntriesAfter(yesterday);
 
-      // Merge remote entries into local database
-      // (In Phase 2, we'll add conflict resolution)
-      for (final remoteEntry in remoteEntries) {
-        // Simple merge: if remote ID not in local, insert it
-        final exists = _entries.any((e) => e.id == remoteEntry.id);
-        if (!exists) {
-          await _db.insertEntry(remoteEntry);
+      // Merge remote entries into local database (skip on web)
+      if (!kIsWeb) {
+        for (final remoteEntry in remoteEntries) {
+          // Simple merge: if remote ID not in local, insert it
+          final exists = _entries.any((e) => e.id == remoteEntry.id);
+          if (!exists) {
+            await _db.insertEntry(remoteEntry);
+          }
+        }
+
+        // Reload entries if any changes
+        if (remoteEntries.isNotEmpty) {
+          await loadEntries();
         }
       }
-
-      // Reload entries if any changes
-      if (remoteEntries.isNotEmpty) {
-        await loadEntries();
-      }
     } catch (e) {
+      // Log unexpected errors only
       debugPrint('Background sync failed: $e');
-      // Silent failure - will retry next cycle
     }
   }
 

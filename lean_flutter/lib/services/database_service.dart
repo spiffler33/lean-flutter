@@ -206,12 +206,13 @@ class DatabaseService {
     return List.generate(maps.length, (i) => Entry.fromJson(maps[i]));
   }
 
-  /// Mark entry as synced
-  Future<void> markAsSynced(int localId, int remoteId) async {
+  /// Mark entry as synced with cloud ID
+  Future<void> markAsSynced(int localId, String cloudId) async {
+    if (kIsWeb) return; // Skip on web
     final db = await database;
     await db.update(
       'entries',
-      {'synced': 1, 'remote_id': remoteId},
+      {'cloud_id': cloudId},
       where: 'id = ?',
       whereArgs: [localId],
     );

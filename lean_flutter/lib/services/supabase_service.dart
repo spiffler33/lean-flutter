@@ -85,7 +85,7 @@ class SupabaseService {
 
   /// Create entry in Supabase
   Future<Entry> createEntry(Entry entry) async {
-    final data = entry.toJson();
+    final data = entry.toSupabaseJson(); // Use Supabase-specific serialization
     data['user_id'] = userId; // Add user_id for RLS
     data['device_id'] = entry.deviceId ?? 'flutter_app'; // Add device_id
     data.remove('id'); // Remove local SQLite ID
@@ -106,7 +106,7 @@ class SupabaseService {
       throw Exception('Cannot update entry without cloud ID');
     }
 
-    final data = entry.toJson();
+    final data = entry.toSupabaseJson(); // Use Supabase-specific serialization
     data['user_id'] = userId;
     data['device_id'] = entry.deviceId ?? 'flutter_app';
     data.remove('id'); // Remove local SQLite ID

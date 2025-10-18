@@ -5,11 +5,66 @@ import '../theme/app_theme.dart';
 
 /// Entry widget with ASCII checkbox support
 /// Displays: □ for todo, ☑ for done
-class EntryWidget extends StatelessWidget {
+/// Includes edit/delete actions on hover
+class EntryWidget extends StatefulWidget {
   final Entry entry;
   final VoidCallback? onToggleTodo;
+  final Function(Entry)? onEdit;
+  final Function(Entry)? onDelete;
 
-  const EntryWidget({super.key, required this.entry, this.onToggleTodo});
+  const EntryWidget({
+    super.key,
+    required this.entry,
+    this.onToggleTodo,
+    this.onEdit,
+    this.onDelete,
+  });
+
+  @override
+  State<EntryWidget> createState() => _EntryWidgetState();
+}
+
+class _EntryWidgetState extends State<EntryWidget> {
+  bool _isHovering = false;
+  bool _isEditing = false;
+  late TextEditingController _editController;
+
+  @override
+  void initState() {
+    super.initState();
+    _editController = TextEditingController(text: widget.entry.content);
+  }
+
+  @override
+  void dispose() {
+    _editController.dispose();
+    super.dispose();
+  }
+
+  void _startEdit() {
+    setState(() {
+      _isEditing = true;
+      _editController.text = widget.entry.content;
+    });
+  }
+
+  void _saveEdit() {
+    final newContent = _editController.text.trim();
+    if (newContent.isNotEmpty && newContent != widget.entry.content) {
+      final updatedEntry = widget.entry.copyWith(content: newContent);
+      widget.onEdit?.call(updatedEntry);
+    }
+    setState(() {
+      _isEditing = false;
+    });
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _isEditing = false;
+      _editController.text = widget.entry.content;
+    });
+  }
 
   String _formatTime(DateTime dt) {
     final now = DateTime.now();
@@ -32,7 +87,7 @@ class EntryWidget extends StatelessWidget {
 
   String _getDisplayContent() {
     // Remove #todo and #done tags from display
-    return entry.content
+    return widget.entry.content
         .replaceAll('#todo', '')
         .replaceAll('#done', '')
         .trim();
@@ -40,24 +95,62 @@ class EntryWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isTodo = entry.isTodo;
-    final isDone = entry.isDone;
+    final isTodo = widget.entry.isTodo;
+    final isDone = widget.entry.isDone;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: Stack(
           children: [
-            // Content with optional todo checkbox
-            if (isTodo)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Editing state
+                  if (_isEditing)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _editController,
+                            autofocus: true,
+                            maxLines: null,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: AppTheme.darkTextPrimary,
+                              height: 1.5,
+                            ),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
+                            onSubmitted: (_) => _saveEdit(),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.check, size: 20),
+                          onPressed: _saveEdit,
+                          color: AppTheme.accentGreen,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          onPressed: _cancelEdit,
+                          color: Colors.red,
+                        ),
+                      ],
+                    )
+                  // Normal content display
+                  else if (isTodo)
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Todo checkbox
                   GestureDetector(
-                    onTap: onToggleTodo,
+                    onTap: widget.onToggleTodo,
                     child: Padding(
                       padding: const EdgeInsets.only(right: 8, top: 2),
                       child: Text(
@@ -83,10 +176,10 @@ class EntryWidget extends StatelessWidget {
                   ),
                 ],
               )
-            else
+            else if (!_isEditing)
               // Regular content (no checkbox)
               SelectableText(
-                entry.content,
+                widget.entry.content,
                 style: const TextStyle(
                   fontSize: 16,
                   color: AppTheme.darkTextPrimary,
@@ -94,52 +187,83 @@ class EntryWidget extends StatelessWidget {
                 ),
               ),
 
-            // AI Badges (pill-shaped)
-            if (_hasAnyBadges())
-              Padding(
-                padding: const EdgeInsets.only(top: 8, bottom: 4),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+                  // AI Badges (pill-shaped)  - only show if not editing
+                  if (!_isEditing && _hasAnyBadges())
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 4),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          // Emotion badge
+                          if (widget.entry.emotion != null && widget.entry.emotion!.isNotEmpty)
+                            AiBadge(
+                              label: widget.entry.emotion!,
+                              type: AiBadgeType.mood,
+                            ),
+
+                          // Theme badges
+                          ...widget.entry.themes.map((theme) => AiBadge(
+                                label: theme,
+                                type: AiBadgeType.theme,
+                              )),
+
+                          // People badges
+                          ...widget.entry.people.map((person) => AiBadge(
+                                label: person,
+                                type: AiBadgeType.people,
+                              )),
+
+                          // Urgency badge
+                          if (widget.entry.urgency != 'none')
+                            AiBadge(
+                              label: widget.entry.urgency,
+                              type: _getUrgencyBadgeType(widget.entry.urgency),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                  // Timestamp - only show if not editing
+                  if (!_isEditing) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      _formatTime(widget.entry.createdAt),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.darkTextSecondary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            // Hover actions (edit/delete) - positioned in top right
+            if (_isHovering && !_isEditing)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Emotion badge
-                    if (entry.emotion != null && entry.emotion!.isNotEmpty)
-                      AiBadge(
-                        label: entry.emotion!,
-                        type: AiBadgeType.mood,
-                      ),
-
-                    // Theme badges
-                    ...entry.themes.map((theme) => AiBadge(
-                          label: theme,
-                          type: AiBadgeType.theme,
-                        )),
-
-                    // People badges
-                    ...entry.people.map((person) => AiBadge(
-                          label: person,
-                          type: AiBadgeType.people,
-                        )),
-
-                    // Urgency badge
-                    if (entry.urgency != 'none')
-                      AiBadge(
-                        label: entry.urgency,
-                        type: _getUrgencyBadgeType(entry.urgency),
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.edit, size: 18),
+                      onPressed: _startEdit,
+                      color: AppTheme.darkTextSecondary,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.delete, size: 18),
+                      onPressed: () => widget.onDelete?.call(widget.entry),
+                      color: AppTheme.darkTextSecondary,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                    ),
                   ],
                 ),
               ),
-
-            // Timestamp
-            const SizedBox(height: 4),
-            Text(
-              _formatTime(entry.createdAt),
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppTheme.darkTextSecondary,
-              ),
-            ),
           ],
         ),
       ),
@@ -147,10 +271,10 @@ class EntryWidget extends StatelessWidget {
   }
 
   bool _hasAnyBadges() {
-    return (entry.emotion != null && entry.emotion!.isNotEmpty) ||
-        entry.themes.isNotEmpty ||
-        entry.people.isNotEmpty ||
-        entry.urgency != 'none';
+    return (widget.entry.emotion != null && widget.entry.emotion!.isNotEmpty) ||
+        widget.entry.themes.isNotEmpty ||
+        widget.entry.people.isNotEmpty ||
+        widget.entry.urgency != 'none';
   }
 
   AiBadgeType _getUrgencyBadgeType(String urgency) {

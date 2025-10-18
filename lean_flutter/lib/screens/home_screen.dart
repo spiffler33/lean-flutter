@@ -345,11 +345,81 @@ class _HomeScreenState extends State<HomeScreen> {
                           itemCount: provider.entries.length,
                           itemBuilder: (context, index) {
                             final entry = provider.entries[index];
-                            return EntryWidget(
-                              entry: entry,
-                              onToggleTodo: entry.isTodo
-                                  ? () => provider.toggleTodo(entry)
-                                  : null,
+
+                            // Check if we need a time divider (>2hr gap)
+                            bool showDivider = false;
+                            if (index > 0) {
+                              final prevEntry = provider.entries[index - 1];
+                              final timeDiff = prevEntry.createdAt.difference(entry.createdAt);
+                              showDivider = timeDiff.inHours >= 2;
+                            }
+
+                            return Column(
+                              children: [
+                                // Time divider if needed
+                                if (showDivider)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 20),
+                                    child: Text(
+                                      '━━━━━━━━━',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        letterSpacing: 2,
+                                        color: Colors.white.withOpacity(0.3),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                // Entry widget
+                                EntryWidget(
+                                  entry: entry,
+                                  onToggleTodo: entry.isTodo
+                                      ? () => provider.toggleTodo(entry)
+                                      : null,
+                                  onEdit: (updatedEntry) async {
+                                    await provider.updateEntry(updatedEntry);
+                                    // Reload entries to refresh the list
+                                    await provider.loadEntries();
+                                  },
+                                  onDelete: (entryToDelete) async {
+                                    // Show confirmation dialog
+                                    final confirmed = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        backgroundColor: AppTheme.darkEntryBackground,
+                                        title: const Text(
+                                          'Delete Entry?',
+                                          style: TextStyle(color: AppTheme.darkTextPrimary),
+                                        ),
+                                        content: const Text(
+                                          'This action cannot be undone.',
+                                          style: TextStyle(color: AppTheme.darkTextSecondary),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(false),
+                                            child: const Text(
+                                              'Cancel',
+                                              style: TextStyle(color: AppTheme.darkTextSecondary),
+                                            ),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(true),
+                                            child: const Text(
+                                              'Delete',
+                                              style: TextStyle(color: Colors.red),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (confirmed == true && entryToDelete.id != null) {
+                                      await provider.deleteEntry(entryToDelete.id!);
+                                    }
+                                  },
+                                ),
+                              ],
                             );
                           },
                         );

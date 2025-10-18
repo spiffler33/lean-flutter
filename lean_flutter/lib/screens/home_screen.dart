@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/entry_provider.dart';
+import '../services/command_handler.dart';
 import '../widgets/entry_widget.dart';
 import '../theme/app_theme.dart';
 
@@ -26,6 +27,24 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _inputFocus.requestFocus();
     });
+
+    // Handle keyboard events
+    _inputFocus.onKeyEvent = (node, event) {
+      if (event is KeyDownEvent) {
+        if (event.logicalKey == LogicalKeyboardKey.enter &&
+            !HardwareKeyboard.instance.isShiftPressed) {
+          _saveEntry();
+          // Re-focus immediately after save
+          Future.microtask(() {
+            if (mounted) {
+              _inputFocus.requestFocus();
+            }
+          });
+          return KeyEventResult.handled;
+        }
+      }
+      return KeyEventResult.ignored;
+    };
   }
 
   @override
@@ -41,6 +60,43 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final provider = context.read<EntryProvider>();
 
+    // Check if it's a command
+    if (content.startsWith('/')) {
+      final commandHandler = CommandHandler(provider, context);
+
+      // Special handling for template commands
+      if (content == '/essay') {
+        setState(() {
+          _inputController.text = CommandHandler.essayTemplate;
+          _showSaveFlash = true;
+        });
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) setState(() => _showSaveFlash = false);
+        });
+        return;
+      }
+
+      if (content == '/idea') {
+        setState(() {
+          _inputController.text = CommandHandler.ideaTemplate;
+          _showSaveFlash = true;
+        });
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) setState(() => _showSaveFlash = false);
+        });
+        return;
+      }
+
+      // Handle other commands
+      final wasCommand = await commandHandler.handleCommand(content);
+      if (wasCommand) {
+        // Clear input after command
+        _inputController.clear();
+        return;
+      }
+    }
+
+    // Not a command, save as entry
     try {
       await provider.createEntry(content);
 
@@ -83,14 +139,67 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Header: "L E A N" with line (matching original)
                   Column(
                     children: [
-                      Text(
-                        'L  E  A  N',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w300,
-                          letterSpacing: 8,
-                          color: Colors.white.withOpacity(0.4),
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Spacer(),
+                          Text(
+                            'L  E  A  N',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w300,
+                              letterSpacing: 8,
+                              color: Colors.white.withOpacity(0.4),
+                            ),
+                          ),
+                          const Spacer(),
+                          // Todo counter (clickable)
+                          Consumer<EntryProvider>(
+                            builder: (context, provider, _) {
+                              final todoCount = provider.entries
+                                  .where((e) => e.isTodo && !e.isDone)
+                                  .length;
+
+                              if (todoCount == 0) {
+                                return const SizedBox.shrink();
+                              }
+
+                              final isFiltered = provider.filterLabel == 'open todos';
+
+                              return GestureDetector(
+                                onTap: () => provider.toggleTodoFilter(),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isFiltered
+                                        ? AppTheme.accentGreen.withOpacity(0.2)
+                                        : AppTheme.darkInputBackground,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isFiltered
+                                          ? AppTheme.accentGreen
+                                          : AppTheme.accentGreen.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '□ $todoCount',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isFiltered
+                                          ? AppTheme.accentGreen
+                                          : Colors.white.withOpacity(0.7),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 5),
                       Text(
@@ -104,7 +213,43 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 20),
+
+                  // Filter indicator (shows when filter is active)
+                  Consumer<EntryProvider>(
+                    builder: (context, provider, _) {
+                      if (provider.filterLabel == null) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Showing: ${provider.filterLabel}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white.withOpacity(0.5),
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => provider.clearFilter(),
+                              child: const Text(
+                                'Clear (Esc)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.accentGreen,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
 
                   // Input box with save flash animation (OUTER container)
                   AnimatedContainer(
@@ -136,18 +281,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: TextField(
                         controller: _inputController,
                         focusNode: _inputFocus,
-                        maxLines: 1, // Single line only
+                        maxLines: null, // Auto-expand for multi-line
+                        minLines: 1, // Start with 1 line
+                        keyboardType: TextInputType.multiline,
                         autofocus: true,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) {
-                          _saveEntry();
-                          // CRITICAL: Re-focus immediately after save
-                          Future.microtask(() {
-                            if (mounted) {
-                              _inputFocus.requestFocus();
-                            }
-                          });
-                        },
+                        textInputAction: TextInputAction.newline,
                         style: const TextStyle(
                           fontSize: 16,
                           color: AppTheme.darkTextPrimary,
@@ -207,14 +345,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           itemCount: provider.entries.length,
                           itemBuilder: (context, index) {
                             final entry = provider.entries[index];
-                            return EntryWidget(entry: entry);
+                            return EntryWidget(
+                              entry: entry,
+                              onToggleTodo: entry.isTodo
+                                  ? () => provider.toggleTodo(entry)
+                                  : null,
+                            );
                           },
                         );
                       },
                     ),
                   ),
                 ],
-            ),
           ),
         ),
       ),

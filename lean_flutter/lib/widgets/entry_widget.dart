@@ -7,8 +7,9 @@ import '../theme/app_theme.dart';
 /// Displays: □ for todo, ☑ for done
 class EntryWidget extends StatelessWidget {
   final Entry entry;
+  final VoidCallback? onToggleTodo;
 
-  const EntryWidget({super.key, required this.entry});
+  const EntryWidget({super.key, required this.entry, this.onToggleTodo});
 
   String _formatTime(DateTime dt) {
     final now = DateTime.now();
@@ -29,6 +30,14 @@ class EntryWidget extends StatelessWidget {
     }
   }
 
+  String _getDisplayContent() {
+    // Remove #todo and #done tags from display
+    return entry.content
+        .replaceAll('#todo', '')
+        .replaceAll('#done', '')
+        .trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isTodo = entry.isTodo;
@@ -41,16 +50,49 @@ class EntryWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Content (selectable)
-            SelectableText(
-              entry.content,
-              style: TextStyle(
-                fontSize: 16,
-                color: AppTheme.darkTextPrimary,
-                height: 1.5,
-                decoration: isDone ? TextDecoration.lineThrough : null,
+            // Content with optional todo checkbox
+            if (isTodo)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Todo checkbox
+                  GestureDetector(
+                    onTap: onToggleTodo,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8, top: 2),
+                      child: Text(
+                        isDone ? '☑' : '□',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: isDone ? AppTheme.accentGreen : AppTheme.darkTextSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Content
+                  Expanded(
+                    child: SelectableText(
+                      _getDisplayContent(),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: AppTheme.darkTextPrimary,
+                        height: 1.5,
+                        decoration: isDone ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              // Regular content (no checkbox)
+              SelectableText(
+                entry.content,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: AppTheme.darkTextPrimary,
+                  height: 1.5,
+                ),
               ),
-            ),
 
             // AI Badges (pill-shaped)
             if (_hasAnyBadges())

@@ -10,14 +10,17 @@ class EntryProvider with ChangeNotifier {
   SupabaseService? _supabase;
 
   List<Entry> _entries = [];
+  List<Entry> _allEntries = []; // Store all entries for filtering
   bool _isLoading = false;
   String? _error;
   Timer? _syncTimer;
+  String? _filterLabel; // Label for active filter (e.g., "today's entries")
 
   List<Entry> get entries => _entries;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isOnline => _supabase?.isAuthenticated ?? false;
+  String? get filterLabel => _filterLabel;
 
   /// Initialize with optional Supabase
   Future<void> initialize({SupabaseService? supabase}) async {
@@ -38,7 +41,9 @@ class EntryProvider with ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      _entries = await _db.getEntries();
+      _allEntries = await _db.getEntries();
+      _entries = _allEntries;
+      _filterLabel = null; // Clear any filter
 
       _isLoading = false;
       _error = null;
@@ -245,6 +250,57 @@ class EntryProvider with ChangeNotifier {
   /// Manual sync trigger
   Future<void> manualSync() async {
     await _performBackgroundSync();
+  }
+
+  /// Set filtered entries (for commands like /today, /search)
+  void setFilteredEntries(List<Entry> filteredEntries, String label) {
+    _entries = filteredEntries;
+    _filterLabel = label;
+    notifyListeners();
+  }
+
+  /// Clear filter and show all entries
+  void clearFilter() {
+    _entries = _allEntries;
+    _filterLabel = null;
+    notifyListeners();
+  }
+
+  /// Toggle todo filter (show only open todos)
+  void toggleTodoFilter() {
+    if (_filterLabel == 'open todos') {
+      // Already filtering todos, so clear filter
+      clearFilter();
+    } else {
+      // Filter to show only open todos (not done)
+      final todos = _allEntries
+          .where((e) => e.isTodo && !e.isDone)
+          .toList();
+      setFilteredEntries(todos, 'open todos');
+    }
+  }
+
+  /// Toggle todo status (between #todo and #done)
+  Future<void> toggleTodo(Entry entry) async {
+    if (entry.id == null) return;
+
+    // Toggle between #todo and #done
+    String newContent;
+    if (entry.content.contains('#done')) {
+      // Done -> Todo
+      newContent = entry.content.replaceAll('#done', '#todo');
+    } else if (entry.content.contains('#todo')) {
+      // Todo -> Done
+      newContent = entry.content.replaceAll('#todo', '#done');
+    } else {
+      return; // Not a todo
+    }
+
+    final updatedEntry = entry.copyWith(content: newContent);
+    await updateEntry(updatedEntry);
+
+    // Reload to refresh the list
+    await loadEntries();
   }
 
   @override

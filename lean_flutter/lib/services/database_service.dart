@@ -90,6 +90,16 @@ class DatabaseService {
       throw Exception('Cannot update entry without ID');
     }
 
+    if (kIsWeb) {
+      // Web: update in memory storage
+      final index = _webMemoryStorage.indexWhere((e) => e.id == entry.id);
+      if (index != -1) {
+        _webMemoryStorage[index] = entry;
+        return 1; // Success
+      }
+      return 0; // Not found
+    }
+
     final db = await database;
     final data = entry.toJson();
     data['synced'] = 0; // Mark as modified, needs sync
@@ -104,6 +114,13 @@ class DatabaseService {
 
   /// Delete entry
   Future<int> deleteEntry(int id) async {
+    if (kIsWeb) {
+      // Web: delete from memory storage
+      final initialLength = _webMemoryStorage.length;
+      _webMemoryStorage.removeWhere((e) => e.id == id);
+      return initialLength - _webMemoryStorage.length; // Return number deleted
+    }
+
     final db = await database;
     return await db.delete(
       'entries',
@@ -153,6 +170,14 @@ class DatabaseService {
 
   /// Search entries
   Future<List<Entry>> searchEntries(String query) async {
+    if (kIsWeb) {
+      // Web: search in memory storage
+      return _webMemoryStorage
+          .where((e) => e.content.toLowerCase().contains(query.toLowerCase()))
+          .take(100)
+          .toList();
+    }
+
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'entries',
@@ -202,14 +227,22 @@ class DatabaseService {
 
   /// Get entries for today
   Future<List<Entry>> getTodayEntries() async {
-    final db = await database;
     final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day).toIso8601String();
+    final todayStart = DateTime(now.year, now.month, now.day);
 
+    if (kIsWeb) {
+      // Web: filter memory storage
+      return _webMemoryStorage
+          .where((e) => e.createdAt.isAfter(todayStart))
+          .toList();
+    }
+
+    final todayStartStr = todayStart.toIso8601String();
+    final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'entries',
       where: 'created_at >= ?',
-      whereArgs: [todayStart],
+      whereArgs: [todayStartStr],
       orderBy: 'created_at DESC',
     );
 
@@ -218,6 +251,13 @@ class DatabaseService {
 
   /// Get todo entries (not done)
   Future<List<Entry>> getTodoEntries() async {
+    if (kIsWeb) {
+      // Web: filter memory storage
+      return _webMemoryStorage
+          .where((e) => e.content.contains('#todo') && !e.content.contains('#done'))
+          .toList();
+    }
+
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'entries',

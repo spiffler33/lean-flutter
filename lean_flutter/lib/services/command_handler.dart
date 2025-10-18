@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/entry.dart';
+import '../widgets/export_modal.dart';
 import 'entry_provider.dart';
 
 /// Command handler for /commands like /help, /search, /today, etc.
@@ -324,7 +325,12 @@ class CommandHandler {
 
   /// /export - Show export dialog
   Future<void> _handleExport() async {
-    _showNotification('Export functionality coming soon!');
+    if (!context.mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => ExportModal(entries: provider.entries),
+    );
   }
 
   /// /essay - Insert essay template

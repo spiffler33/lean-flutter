@@ -132,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           width: 2,
                         ),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // Less vertical padding
+                      padding: const EdgeInsets.all(12), // EXACT match: 12px all sides from CSS
                       child: TextField(
                         controller: _inputController,
                         focusNode: _inputFocus,
@@ -151,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: const TextStyle(
                           fontSize: 16,
                           color: AppTheme.darkTextPrimary,
-                          height: 1.2, // Tighter line height for single line
+                          height: 1.5, // Match CSS line-height
                         ),
                         decoration: const InputDecoration(
                           hintText: 'What\'s on your mind?',

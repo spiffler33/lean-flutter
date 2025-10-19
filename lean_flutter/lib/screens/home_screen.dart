@@ -362,7 +362,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       const SizedBox(height: 5),
-                      Center(
+                      Container(
+                        width: double.infinity,
+                        alignment: Alignment.center,
                         child: Text(
                           '━━━━━━━━━',
                           style: TextStyle(
@@ -563,19 +565,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             // Show time divider at the top if enabled
                             if (index == 0 && provider.showTimeDivider) {
                               final dividerText = time_divider_util.TimeDivider.createDividerElement(DateTime.now());
-                              return Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 20),
-                                  child: Text(
-                                    dividerText,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      letterSpacing: 1,
-                                      color: colors.timeDivider.withOpacity(0.4),
-                                      fontFamily: 'monospace',
-                                    ),
-                                    textAlign: TextAlign.center,
+                              return Container(
+                                width: double.infinity,
+                                alignment: Alignment.center,
+                                padding: const EdgeInsets.symmetric(vertical: 20),
+                                child: Text(
+                                  dividerText,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    letterSpacing: 1,
+                                    color: colors.timeDivider.withOpacity(0.4),
+                                    fontFamily: 'monospace',
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
                               );
                             }

@@ -136,7 +136,10 @@ class DatabaseService {
   Future<List<Entry>> getEntries({int limit = 50}) async {
     if (kIsWeb) {
       // Web: return from memory storage
-      return _webMemoryStorage.take(limit).toList();
+      print('💾 getEntries called: ${_webMemoryStorage.length} total in storage, returning up to $limit');
+      final result = _webMemoryStorage.take(limit).toList();
+      print('📋 Returning ${result.length} entries');
+      return result;
     }
 
     final db = await database;

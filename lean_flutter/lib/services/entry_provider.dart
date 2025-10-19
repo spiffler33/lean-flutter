@@ -66,19 +66,22 @@ class EntryProvider with ChangeNotifier {
       await _db.clearWebStorage();
 
       // Populate web memory storage with fresh data from Supabase
-      for (final remoteEntry in remoteEntries) {
-        await _db.insertEntry(remoteEntry);
+      // Insert in reverse order to maintain chronological order (newest first)
+      for (var i = remoteEntries.length - 1; i >= 0; i--) {
+        await _db.insertEntry(remoteEntries[i]);
       }
 
-      print('✅ Successfully synced entries from cloud');
-    } catch (e) {
+      print('✅ Successfully inserted ${remoteEntries.length} entries into storage');
+    } catch (e, stackTrace) {
       print('⚠️ Failed to fetch from Supabase: $e');
+      print('Stack: $stackTrace');
     }
   }
 
   /// Load entries from local database
   Future<void> loadEntries() async {
     try {
+      print('📖 Loading entries from database...');
       _isLoading = true;
       notifyListeners();
 
@@ -87,10 +90,14 @@ class EntryProvider with ChangeNotifier {
       _filterLabel = null; // Clear any filter
       _showTimeDivider = true; // Show divider after loading (PWA: indicates refresh)
 
+      print('✅ Loaded ${_entries.length} entries successfully');
+
       _isLoading = false;
       _error = null;
       notifyListeners();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ Error loading entries: $e');
+      print('Stack: $stackTrace');
       _error = e.toString();
       _isLoading = false;
       notifyListeners();

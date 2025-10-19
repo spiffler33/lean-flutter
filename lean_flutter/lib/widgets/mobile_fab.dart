@@ -82,8 +82,63 @@ class _MobileFABState extends State<MobileFAB>
     final provider = context.read<EntryProvider>();
     final commandHandler = CommandHandler(provider, context);
 
-    // Execute command
+    // Special handling for /essay and /idea - create entries with templates
+    if (action == '/essay') {
+      await _handleTemplateAction(
+        provider,
+        CommandHandler.essayTemplate,
+        'Essay template created',
+      );
+      return;
+    }
+
+    if (action == '/idea') {
+      await _handleTemplateAction(
+        provider,
+        CommandHandler.ideaTemplate,
+        'Idea template created',
+      );
+      return;
+    }
+
+    // Execute other commands normally
     await commandHandler.handleCommand(action);
+  }
+
+  /// Handle template actions by creating a new entry with the template
+  Future<void> _handleTemplateAction(
+    EntryProvider provider,
+    String template,
+    String successMessage,
+  ) async {
+    try {
+      // Create entry with template content
+      await provider.createEntry(template);
+
+      if (!context.mounted) return;
+
+      // Show success notification
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(successMessage),
+          backgroundColor: const Color(0xFF1A1A1A),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      // Show error notification
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to create template: $e'),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override

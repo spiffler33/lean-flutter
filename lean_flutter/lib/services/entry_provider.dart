@@ -29,12 +29,38 @@ class EntryProvider with ChangeNotifier {
   Future<void> initialize({SupabaseService? supabase}) async {
     _supabase = supabase;
 
+    // On web: Fetch from Supabase first (web uses in-memory storage)
+    if (kIsWeb && _supabase != null && _supabase!.isAuthenticated) {
+      await _fetchFromSupabaseWeb();
+    }
+
     // Load entries from local database
     await loadEntries();
 
     // Start background sync if online
     if (_supabase != null && _supabase!.isAuthenticated) {
       startBackgroundSync();
+    }
+  }
+
+  /// Fetch entries from Supabase and populate web memory storage
+  Future<void> _fetchFromSupabaseWeb() async {
+    if (_supabase == null || !_supabase!.isAuthenticated) return;
+
+    try {
+      debugPrint('📥 Pulling all entries from Supabase...');
+      final remoteEntries = await _supabase!.fetchEntries(limit: 1000);
+
+      debugPrint('📦 Pulled ${remoteEntries.length} entries from Supabase');
+
+      // Populate web memory storage directly
+      for (final remoteEntry in remoteEntries) {
+        await _db.insertEntry(remoteEntry);
+      }
+
+      debugPrint('✅ Successfully synced entries from cloud');
+    } catch (e) {
+      debugPrint('⚠️ Failed to fetch from Supabase: $e');
     }
   }
 

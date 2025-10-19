@@ -246,20 +246,29 @@ class EntryProvider with ChangeNotifier {
 
   /// Sync single entry to cloud (background)
   Future<void> _syncEntryToCloud(Entry entry) async {
-    if (_supabase == null || !_supabase!.isAuthenticated) return;
-    if (entry.id == null) return;
+    if (_supabase == null || !_supabase!.isAuthenticated) {
+      debugPrint('⚠️ Sync skipped: Not authenticated');
+      return;
+    }
+    if (entry.id == null) {
+      debugPrint('⚠️ Sync skipped: Entry has no local ID');
+      return;
+    }
 
     // Skip entries that have permanently failed (malformed data from before fix)
     if (_failedSyncEntries.contains(entry.id)) return;
 
     try {
+      debugPrint('☁️ Syncing entry ${entry.id} to Supabase...');
       final remoteEntry = await _supabase!.createEntry(entry);
+      debugPrint('✅ Synced entry ${entry.id}, got cloudId: ${remoteEntry.cloudId}');
 
       // Mark as synced in local database (use cloudId instead of id)
       if (remoteEntry.cloudId != null && entry.id != null) {
         await _db.markAsSynced(entry.id!, remoteEntry.cloudId!);
+        debugPrint('✅ Marked entry ${entry.id} as synced with cloudId ${remoteEntry.cloudId}');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       final errorStr = e.toString();
 
       // If it's a permanent error (malformed/incompatible data), stop retrying this entry
@@ -272,7 +281,13 @@ class EntryProvider with ChangeNotifier {
       }
 
       // Log other errors (network issues, etc.)
-      debugPrint('Sync failed for entry ${entry.id}: $e');
+      debugPrint('❌ Sync failed for entry ${entry.id}: $e');
+      debugPrint('Stack trace: $stackTrace');
+
+      // On web, rethrow to notify user of sync failure
+      if (kIsWeb) {
+        rethrow;
+      }
     }
   }
 

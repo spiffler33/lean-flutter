@@ -266,42 +266,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
+                                        horizontal: 12,
                                         vertical: 12,
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            authProvider.isAuthenticated ? '●' : '○',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: authProvider.isAuthenticated
-                                                  ? colors.accent
-                                                  : colors.textSecondary.withOpacity(0.5),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(4),
-                                              color: colors.inputBackground.withOpacity(0.5),
-                                            ),
-                                            child: Text(
-                                              authProvider.isAuthenticated
-                                                  ? (authProvider.user?.email?.split('@')[0] ?? 'Account')
-                                                  : 'Sign In',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: colors.textSecondary,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
+                                      child: Text(
+                                        authProvider.isAuthenticated ? '●' : '○',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: authProvider.isAuthenticated
+                                              ? colors.accent
+                                              : colors.textSecondary.withOpacity(0.5),
+                                        ),
                                       ),
                                     ),
                                   );

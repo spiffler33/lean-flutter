@@ -328,28 +328,22 @@ class _HomeScreenState extends State<HomeScreen> {
                                       PlatformUtils.selectionClick();
                                       provider.toggleTodoFilter();
                                     },
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(8),
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
+                                        horizontal: 8,
                                         vertical: 12,
                                       ),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
+                                          horizontal: 6,
+                                          vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
                                           color: isFiltered
-                                              ? colors.accent.withOpacity(0.2)
-                                              : colors.inputBackground,
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: isFiltered
-                                                ? colors.accent
-                                                : colors.accent.withOpacity(0.3),
-                                            width: 1,
-                                          ),
+                                              ? colors.accent.withOpacity(0.15)
+                                              : colors.inputBackground.withOpacity(0.5),
+                                          borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: Text(
                                           '□ $todoCount',
@@ -357,8 +351,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             fontSize: 12,
                                             color: isFiltered
                                                 ? colors.accent
-                                                : colors.textPrimary.withOpacity(0.7),
-                                            fontWeight: FontWeight.w500,
+                                                : colors.textSecondary,
+                                            fontWeight: isFiltered ? FontWeight.w500 : FontWeight.normal,
                                           ),
                                         ),
                                       ),

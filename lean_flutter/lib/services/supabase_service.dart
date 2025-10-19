@@ -110,6 +110,7 @@ class SupabaseService {
     data['user_id'] = userId;
     data['device_id'] = entry.deviceId ?? 'flutter_app';
     data.remove('id'); // Remove local SQLite ID
+    data.remove('cloud_id'); // Remove cloud_id (Supabase uses 'id' for UUID)
 
     final response = await _client
         .from('entries')

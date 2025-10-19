@@ -25,6 +25,11 @@ class EntryProvider with ChangeNotifier {
   String? get filterLabel => _filterLabel;
   bool get showTimeDivider => _showTimeDivider;
 
+  /// Get count of open todos from ALL entries (not filtered list)
+  int get openTodoCount => _allEntries
+      .where((e) => e.isTodo && !e.isDone)
+      .length;
+
   /// Set Supabase service reference (synchronous)
   void setSupabase(SupabaseService supabase) {
     print('📡 Setting Supabase reference in EntryProvider');
@@ -428,10 +433,58 @@ class EntryProvider with ChangeNotifier {
     }
 
     final updatedEntry = entry.copyWith(content: newContent);
-    await updateEntry(updatedEntry);
 
-    // Reload to refresh the list
-    await loadEntries();
+    try {
+      // Update in database
+      await _db.updateEntry(updatedEntry);
+
+      // Update in allEntries
+      final allIndex = _allEntries.indexWhere((e) => e.id == entry.id);
+      if (allIndex != -1) {
+        _allEntries[allIndex] = updatedEntry;
+      }
+
+      // Update in displayed entries based on filter state
+      if (_filterLabel == 'open todos') {
+        // If marking as done, remove from filtered list
+        if (newContent.contains('#done')) {
+          _entries.removeWhere((e) => e.id == entry.id);
+        } else {
+          // If marking as todo again, update it
+          final index = _entries.indexWhere((e) => e.id == entry.id);
+          if (index != -1) {
+            _entries[index] = updatedEntry;
+          }
+        }
+      } else {
+        // No filter active, just update the entry
+        final index = _entries.indexWhere((e) => e.id == entry.id);
+        if (index != -1) {
+          _entries[index] = updatedEntry;
+        }
+      }
+
+      // Single notification after all updates
+      notifyListeners();
+
+      // Clear filter if no more open todos (PWA behavior: updateTodoCounter line 1203)
+      if (_filterLabel == 'open todos' && openTodoCount == 0) {
+        clearFilter();
+      }
+
+      // Sync to cloud (await on web to ensure persistence)
+      if (_supabase != null && _supabase!.isAuthenticated) {
+        if (kIsWeb) {
+          await _syncEntryToCloud(updatedEntry);
+        } else {
+          _syncEntryToCloud(updatedEntry); // Background on mobile
+        }
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
   }
 
   /// Show time divider (for /clear command)

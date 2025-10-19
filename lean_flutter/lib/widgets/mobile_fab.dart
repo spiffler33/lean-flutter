@@ -16,7 +16,9 @@ import '../theme/theme_colors.dart';
 /// Secondary actions (via More):
 /// - Export, Stats, Yesterday, Week, Clear, Templates
 class MobileFAB extends StatefulWidget {
-  const MobileFAB({super.key});
+  final Function(String)? onTemplateInsert;
+
+  const MobileFAB({super.key, this.onTemplateInsert});
 
   @override
   State<MobileFAB> createState() => _MobileFABState();
@@ -82,63 +84,39 @@ class _MobileFABState extends State<MobileFAB>
     final provider = context.read<EntryProvider>();
     final commandHandler = CommandHandler(provider, context);
 
-    // Special handling for /essay and /idea - create entries with templates
+    // Special handling for /essay and /idea - populate input box instead of creating entry
     if (action == '/essay') {
-      await _handleTemplateAction(
-        provider,
-        CommandHandler.essayTemplate,
-        'Essay template created',
+      widget.onTemplateInsert?.call(CommandHandler.essayTemplate);
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Essay template inserted'),
+          backgroundColor: const Color(0xFF1A1A1A),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
 
     if (action == '/idea') {
-      await _handleTemplateAction(
-        provider,
-        CommandHandler.ideaTemplate,
-        'Idea template created',
+      widget.onTemplateInsert?.call(CommandHandler.ideaTemplate);
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Idea template inserted'),
+          backgroundColor: const Color(0xFF1A1A1A),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
 
     // Execute other commands normally
     await commandHandler.handleCommand(action);
-  }
-
-  /// Handle template actions by creating a new entry with the template
-  Future<void> _handleTemplateAction(
-    EntryProvider provider,
-    String template,
-    String successMessage,
-  ) async {
-    try {
-      // Create entry with template content
-      await provider.createEntry(template);
-
-      if (!context.mounted) return;
-
-      // Show success notification
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(successMessage),
-          backgroundColor: const Color(0xFF1A1A1A),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-
-      // Show error notification
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to create template: $e'),
-          backgroundColor: Colors.red.shade700,
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
   }
 
   @override
@@ -400,7 +378,7 @@ class _MobileFABState extends State<MobileFAB>
                 _buildThemeOption(context, themeProvider, 'matrix', 'Green terminal', Colors.black, const Color(0xFF00FF41)),
                 _buildThemeOption(context, themeProvider, 'paper', 'Warm paper', const Color(0xFFF5F1E8), const Color(0xFFD4A574)),
                 _buildThemeOption(context, themeProvider, 'midnight', 'Deep blues', const Color(0xFF0A0E27), const Color(0xFF6366F1)),
-                _buildThemeOption(context, themeProvider, 'mono', 'Pure B&W', Colors.black, Colors.white),
+                _buildThemeOption(context, themeProvider, 'mono', 'Pure B&W', Colors.white, Colors.black),
               ],
             ),
           );

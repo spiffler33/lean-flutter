@@ -221,7 +221,22 @@ class _HomeScreenState extends State<HomeScreen> {
         return Scaffold(
           backgroundColor: colors.background,
           // FAB for mobile only (< 600px width)
-          floatingActionButton: isMobile ? const MobileFAB() : null,
+          floatingActionButton: isMobile
+              ? MobileFAB(
+                  onTemplateInsert: (template) {
+                    setState(() {
+                      _inputController.text = template;
+                      _showSaveFlash = true;
+                    });
+                    // Focus the input box so user can edit
+                    _inputFocus.requestFocus();
+                    // Clear flash after animation
+                    Future.delayed(const Duration(milliseconds: 300), () {
+                      if (mounted) setState(() => _showSaveFlash = false);
+                    });
+                  },
+                )
+              : null,
           body: Center(
             child: Container(
               width: double.infinity,

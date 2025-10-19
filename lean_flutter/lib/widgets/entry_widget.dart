@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/entry.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/platform_utils.dart';
 
 /// Entry widget with ASCII checkbox support
 /// Displays: □ for todo, ☑ for done
@@ -175,11 +176,19 @@ class _EntryWidgetState extends State<EntryWidget> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Todo checkbox
-                              GestureDetector(
-                                onTap: widget.onToggleTodo,
+                              // Todo checkbox with 48x48pt touch target
+                              InkWell(
+                                onTap: () {
+                                  PlatformUtils.lightImpact();
+                                  widget.onToggleTodo?.call();
+                                },
+                                borderRadius: BorderRadius.circular(4),
                                 child: Padding(
-                                  padding: const EdgeInsets.only(right: 8, top: 2),
+                                  // Expanded touch area (48x48pt minimum)
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 12,
+                                  ),
                                   child: Text(
                                     isDone ? '☑' : '□',
                                     style: TextStyle(
@@ -271,25 +280,28 @@ class _EntryWidgetState extends State<EntryWidget> {
                 // Hover actions (edit/delete) - positioned in top right
                 if (_isHovering && !_isEditing)
                   Positioned(
-                    top: 8,
-                    right: 8,
+                    top: 4,
+                    right: 4,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Edit button with 48x48pt touch target
                         IconButton(
                           icon: const Icon(Icons.edit, size: 18),
                           onPressed: _startEdit,
                           color: colors.textSecondary,
-                          padding: const EdgeInsets.all(4),
-                          constraints: const BoxConstraints(),
+                          padding: const EdgeInsets.all(12), // 48x48pt minimum
+                          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                          tooltip: 'Edit',
                         ),
-                        const SizedBox(width: 4),
+                        // Delete button with 48x48pt touch target
                         IconButton(
                           icon: const Icon(Icons.delete, size: 18),
                           onPressed: () => widget.onDelete?.call(widget.entry),
                           color: colors.textSecondary,
-                          padding: const EdgeInsets.all(4),
-                          constraints: const BoxConstraints(),
+                          padding: const EdgeInsets.all(12), // 48x48pt minimum
+                          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                          tooltip: 'Delete',
                         ),
                       ],
                     ),

@@ -42,7 +42,10 @@ class _AuthScreenState extends State<AuthScreen> {
     if (mounted) {
       setState(() => _isLoading = false);
 
-      if (!success && authProvider.error != null) {
+      if (success) {
+        // Close the dialog on successful login
+        Navigator.pop(context);
+      } else if (authProvider.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(authProvider.error!),

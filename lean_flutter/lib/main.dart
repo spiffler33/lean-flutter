@@ -79,11 +79,7 @@ class LeanApp extends StatelessWidget {
                   ? 'serif' // Paper theme uses serif font
                   : 'monospace', // All others use monospace
             ),
-            home: authProvider.isLoading
-                ? Container() // Loading state
-                : authProvider.isAuthenticated
-                    ? const HomeScreen()
-                    : const AuthScreen(),
+            home: const HomeScreen(), // Always show HomeScreen (offline-first)
           );
         },
       ),

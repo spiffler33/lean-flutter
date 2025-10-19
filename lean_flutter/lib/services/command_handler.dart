@@ -275,23 +275,25 @@ class CommandHandler {
           return AlertDialog(
             backgroundColor: colors.modalBackground,
             title: Text(
-              '▊ Stats',
+              'STATS',
               style: TextStyle(
                 color: colors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 2,
+                fontFamily: 'monospace',
               ),
             ),
-            content: SizedBox(
-              width: 600,
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
               child: SingleChildScrollView(
                 child: Text(
                   statsDisplay,
                   style: TextStyle(
                     fontFamily: 'monospace',
-                    fontSize: 12,
+                    fontSize: 11,
                     color: colors.textPrimary,
-                    height: 1.6,
+                    height: 1.5,
                   ),
                 ),
               ),
@@ -465,9 +467,9 @@ class CommandHandler {
     final streakArrows = currentStreak > 0 ? '▲' * (currentStreak.clamp(0, 10)) : '';
 
     return '''
-╔═══════════════════════════════════════╗
-║      ▊ Your Thought Patterns          ║
-╚═══════════════════════════════════════╝
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Your Thought Patterns
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 STREAK
    Current Streak: $streakArrows $currentStreak day${currentStreak != 1 ? 's' : ''}

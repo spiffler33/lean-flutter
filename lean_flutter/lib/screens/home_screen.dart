@@ -24,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _inputController = TextEditingController();
   final _inputFocus = FocusNode();
   bool _showSaveFlash = false;
+  int? _editingEntryId; // Track which entry should enter edit mode
 
   @override
   void initState() {
@@ -658,11 +659,27 @@ class _HomeScreenState extends State<HomeScreen> {
                             final entryIndex = provider.showTimeDivider ? index - 1 : index;
                             final entry = provider.entries[entryIndex];
 
-                            // Swipe-to-delete wrapper (mobile UX)
+                            // Swipe gestures: right=edit, left=delete
                             return Dismissible(
                               key: Key(entry.id?.toString() ?? 'entry-$entryIndex'),
-                              direction: DismissDirection.endToStart, // Swipe left only
+                              direction: DismissDirection.horizontal,
+                              // Swipe right: Edit (minimal accent color)
                               background: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: colors.accent.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(colors.borderRadius),
+                                ),
+                                alignment: Alignment.centerLeft,
+                                padding: const EdgeInsets.only(left: 20),
+                                child: Icon(
+                                  Icons.edit,
+                                  color: colors.accent,
+                                  size: 28,
+                                ),
+                              ),
+                              // Swipe left: Delete
+                              secondaryBackground: Container(
                                 margin: const EdgeInsets.only(bottom: 8),
                                 decoration: BoxDecoration(
                                   color: Colors.red,
@@ -677,55 +694,74 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               confirmDismiss: (direction) async {
-                                // Show confirmation dialog
-                                return await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    backgroundColor: colors.modalBackground,
-                                    title: Text(
-                                      'Delete Entry?',
-                                      style: TextStyle(color: colors.textPrimary),
-                                    ),
-                                    content: Text(
-                                      'This action cannot be undone.',
-                                      style: TextStyle(color: colors.textSecondary),
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(context).pop(false),
-                                        child: Text(
-                                          'Cancel',
-                                          style: TextStyle(color: colors.textSecondary),
-                                        ),
+                                if (direction == DismissDirection.startToEnd) {
+                                  // Swipe right: Edit - trigger edit mode and prevent dismissal
+                                  await PlatformUtils.lightImpact();
+                                  setState(() {
+                                    _editingEntryId = entry.id;
+                                  });
+                                  return false; // Don't dismiss, just enter edit mode
+                                } else {
+                                  // Swipe left: Delete - show confirmation dialog
+                                  return await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      backgroundColor: colors.modalBackground,
+                                      title: Text(
+                                        'Delete Entry?',
+                                        style: TextStyle(color: colors.textPrimary),
                                       ),
-                                      TextButton(
-                                        onPressed: () => Navigator.of(context).pop(true),
-                                        child: const Text(
-                                          'Delete',
-                                          style: TextStyle(color: Colors.red),
-                                        ),
+                                      content: Text(
+                                        'This action cannot be undone.',
+                                        style: TextStyle(color: colors.textSecondary),
                                       ),
-                                    ],
-                                  ),
-                                );
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(false),
+                                          child: Text(
+                                            'Cancel',
+                                            style: TextStyle(color: colors.textSecondary),
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(true),
+                                          child: const Text(
+                                            'Delete',
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ) ?? false;
+                                }
                               },
                               onDismissed: (direction) async {
-                                // Heavy haptic feedback on delete
+                                // Only delete reaches here (edit returns false from confirmDismiss)
                                 await PlatformUtils.heavyImpact();
-
                                 if (entry.id != null) {
                                   await provider.deleteEntry(entry.id!);
                                 }
                               },
                               child: EntryWidget(
                                 entry: entry,
+                                shouldStartEditing: _editingEntryId == entry.id,
                                 onToggleTodo: entry.isTodo
                                     ? () => provider.toggleTodo(entry)
                                     : null,
                                 onEdit: (updatedEntry) async {
                                   await provider.updateEntry(updatedEntry);
+                                  // Clear editing state
+                                  setState(() {
+                                    _editingEntryId = null;
+                                  });
                                   // Reload entries to refresh the list
                                   await provider.loadEntries();
+                                },
+                                onCancelEdit: () {
+                                  // Clear editing state when edit is cancelled
+                                  setState(() {
+                                    _editingEntryId = null;
+                                  });
                                 },
                                 onDelete: (entryToDelete) async {
                                   // Show confirmation dialog (for desktop/web hover actions)

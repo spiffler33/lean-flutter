@@ -11,15 +11,19 @@ import '../utils/platform_utils.dart';
 /// Includes edit/delete actions on hover
 class EntryWidget extends StatefulWidget {
   final Entry entry;
+  final bool shouldStartEditing;
   final VoidCallback? onToggleTodo;
   final Function(Entry)? onEdit;
+  final VoidCallback? onCancelEdit;
   final Function(Entry)? onDelete;
 
   const EntryWidget({
     super.key,
     required this.entry,
+    this.shouldStartEditing = false,
     this.onToggleTodo,
     this.onEdit,
+    this.onCancelEdit,
     this.onDelete,
   });
 
@@ -36,6 +40,19 @@ class _EntryWidgetState extends State<EntryWidget> {
   void initState() {
     super.initState();
     _editController = TextEditingController(text: widget.entry.content);
+    _isEditing = widget.shouldStartEditing;
+  }
+
+  @override
+  void didUpdateWidget(EntryWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Enter edit mode when shouldStartEditing becomes true
+    if (widget.shouldStartEditing && !oldWidget.shouldStartEditing) {
+      setState(() {
+        _isEditing = true;
+        _editController.text = widget.entry.content;
+      });
+    }
   }
 
   @override
@@ -67,6 +84,7 @@ class _EntryWidgetState extends State<EntryWidget> {
       _isEditing = false;
       _editController.text = widget.entry.content;
     });
+    widget.onCancelEdit?.call();
   }
 
   String _formatTime(DateTime dt) {

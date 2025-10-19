@@ -84,38 +84,7 @@ class _MobileFABState extends State<MobileFAB>
     final provider = context.read<EntryProvider>();
     final commandHandler = CommandHandler(provider, context);
 
-    // Special handling for /essay and /idea - populate input box instead of creating entry
-    if (action == '/essay') {
-      widget.onTemplateInsert?.call(CommandHandler.essayTemplate);
-
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Essay template inserted'),
-          backgroundColor: const Color(0xFF1A1A1A),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    if (action == '/idea') {
-      widget.onTemplateInsert?.call(CommandHandler.ideaTemplate);
-
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Idea template inserted'),
-          backgroundColor: const Color(0xFF1A1A1A),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    // Execute other commands normally
+    // Execute commands
     await commandHandler.handleCommand(action);
   }
 
@@ -222,9 +191,6 @@ class _MobileFABState extends State<MobileFAB>
                             _buildCompactMenuItem('Yesterday', Icons.history, colors, () => _handleAction('/yesterday')),
                             _buildCompactMenuItem('Week', Icons.calendar_today, colors, () => _handleAction('/week')),
                             _buildCompactMenuItem('Clear View', Icons.clear_all, colors, () => _handleAction('/clear')),
-                            const Divider(height: 16),
-                            _buildCompactMenuItem('Essay', Icons.article, colors, () => _handleAction('/essay')),
-                            _buildCompactMenuItem('Idea', Icons.lightbulb_outline, colors, () => _handleAction('/idea')),
                           ],
                         ),
                       ),
@@ -356,30 +322,44 @@ class _MobileFABState extends State<MobileFAB>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      isScrollControlled: true, // Allow custom height
       builder: (context) => Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
-          return Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Choose Theme',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: colors.textPrimary,
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Choose Theme',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: colors.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                // Theme options
-                _buildThemeOption(context, themeProvider, 'minimal', 'Clean minimal', Colors.grey.shade800, const Color(0xFF4CAF50)),
-                _buildThemeOption(context, themeProvider, 'matrix', 'Green terminal', Colors.black, const Color(0xFF00FF41)),
-                _buildThemeOption(context, themeProvider, 'paper', 'Warm paper', const Color(0xFFF5F1E8), const Color(0xFFD4A574)),
-                _buildThemeOption(context, themeProvider, 'midnight', 'Deep blues', const Color(0xFF0A0E27), const Color(0xFF6366F1)),
-                _buildThemeOption(context, themeProvider, 'mono', 'Pure B&W', Colors.white, Colors.black),
-              ],
+                  const SizedBox(height: 16),
+                  // Scrollable theme options
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.6,
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          _buildThemeOption(context, themeProvider, 'minimal', 'Clean minimal', Colors.grey.shade800, const Color(0xFF4CAF50)),
+                          _buildThemeOption(context, themeProvider, 'matrix', 'Green terminal', Colors.black, const Color(0xFF00FF41)),
+                          _buildThemeOption(context, themeProvider, 'paper', 'Warm paper', const Color(0xFFF5F1E8), const Color(0xFFD4A574)),
+                          _buildThemeOption(context, themeProvider, 'midnight', 'Deep blues', const Color(0xFF0A0E27), const Color(0xFF6366F1)),
+                          _buildThemeOption(context, themeProvider, 'mono', 'Pure B&W', Colors.white, Colors.black),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },

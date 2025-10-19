@@ -1,0 +1,17 @@
+{
+  "git": {
+    "deploymentEnabled": {
+      "flutter-rebuild": true
+    }
+  },
+  "buildCommand": "flutter build web --release",
+  "outputDirectory": "build/web",
+  "installCommand": "",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

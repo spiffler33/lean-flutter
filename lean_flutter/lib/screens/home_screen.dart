@@ -306,9 +306,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           // Todo counter (clickable)
                           Consumer<EntryProvider>(
                             builder: (context, provider, _) {
-                              final todoCount = provider.entries
-                                  .where((e) => e.isTodo && !e.isDone)
-                                  .length;
+                              // Count from ALL entries, not just filtered ones (PWA behavior)
+                              final todoCount = provider.openTodoCount;
 
                               if (todoCount == 0) {
                                 return const SizedBox.shrink();
@@ -363,12 +362,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       const SizedBox(height: 5),
-                      Text(
-                        '━━━━━━━━━',
-                        style: TextStyle(
-                          fontSize: 10,
-                          letterSpacing: 2,
-                          color: colors.timeDivider.withOpacity(0.2),
+                      Center(
+                        child: Text(
+                          '━━━━━━━━━',
+                          style: TextStyle(
+                            fontSize: 10,
+                            letterSpacing: 2,
+                            color: colors.timeDivider.withOpacity(0.2),
+                          ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ],
@@ -561,17 +563,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             // Show time divider at the top if enabled
                             if (index == 0 && provider.showTimeDivider) {
                               final dividerText = time_divider_util.TimeDivider.createDividerElement(DateTime.now());
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 20),
-                                child: Text(
-                                  dividerText,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    letterSpacing: 1,
-                                    color: colors.timeDivider.withOpacity(0.4),
-                                    fontFamily: 'monospace',
+                              return Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 20),
+                                  child: Text(
+                                    dividerText,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      letterSpacing: 1,
+                                      color: colors.timeDivider.withOpacity(0.4),
+                                      fontFamily: 'monospace',
+                                    ),
+                                    textAlign: TextAlign.center,
                                   ),
-                                  textAlign: TextAlign.center,
                                 ),
                               );
                             }

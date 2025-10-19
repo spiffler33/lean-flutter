@@ -235,133 +235,143 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 10),
 
                   // Header: "L E A N" with line (matching original)
+                  // Use Stack to ensure LEAN text and decorative line are truly centered
                   Column(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Auth indicator (left side, like PWA)
-                          Consumer<AuthProvider>(
-                            builder: (context, authProvider, _) {
-                              return InkWell(
-                                onTap: () => _handleAuthClick(authProvider),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Padding(
-                                  // Minimum 48x48pt touch target
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 12,
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      // Sync indicator
-                                      Text(
-                                        authProvider.isAuthenticated ? '●' : '○',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: authProvider.isAuthenticated
-                                              ? colors.accent
-                                              : colors.textSecondary.withOpacity(0.5),
-                                        ),
+                      SizedBox(
+                        height: 48, // Match touch target height
+                        child: Stack(
+                          children: [
+                            // Centered "L E A N" text
+                            Center(
+                              child: Text(
+                                'L  E  A  N',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w300,
+                                  letterSpacing: 8,
+                                  color: colors.logoColor.withOpacity(0.4),
+                                ),
+                              ),
+                            ),
+                            // Auth indicator (positioned left)
+                            Positioned(
+                              left: 0,
+                              top: 0,
+                              bottom: 0,
+                              child: Consumer<AuthProvider>(
+                                builder: (context, authProvider, _) {
+                                  return InkWell(
+                                    onTap: () => _handleAuthClick(authProvider),
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 12,
                                       ),
-                                      const SizedBox(width: 6),
-                                      // Auth button text
-                                      Container(
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            authProvider.isAuthenticated ? '●' : '○',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: authProvider.isAuthenticated
+                                                  ? colors.accent
+                                                  : colors.textSecondary.withOpacity(0.5),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(4),
+                                              color: colors.inputBackground.withOpacity(0.5),
+                                            ),
+                                            child: Text(
+                                              authProvider.isAuthenticated
+                                                  ? (authProvider.user?.email?.split('@')[0] ?? 'Account')
+                                                  : 'Sign In',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: colors.textSecondary,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            // Todo counter (positioned right)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              bottom: 0,
+                              child: Consumer<EntryProvider>(
+                                builder: (context, provider, _) {
+                                  final todoCount = provider.openTodoCount;
+
+                                  if (todoCount == 0) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  final isFiltered = provider.filterLabel == 'open todos';
+
+                                  return InkWell(
+                                    onTap: () {
+                                      PlatformUtils.selectionClick();
+                                      provider.toggleTodoFilter();
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 12,
+                                      ),
+                                      child: Container(
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
+                                          horizontal: 8,
+                                          vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(4),
-                                          color: colors.inputBackground.withOpacity(0.5),
+                                          color: isFiltered
+                                              ? colors.accent.withOpacity(0.2)
+                                              : colors.inputBackground,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: isFiltered
+                                                ? colors.accent
+                                                : colors.accent.withOpacity(0.3),
+                                            width: 1,
+                                          ),
                                         ),
                                         child: Text(
-                                          authProvider.isAuthenticated
-                                              ? (authProvider.user?.email?.split('@')[0] ?? 'Account')
-                                              : 'Sign In',
+                                          '□ $todoCount',
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: colors.textSecondary,
+                                            color: isFiltered
+                                                ? colors.accent
+                                                : colors.textPrimary.withOpacity(0.7),
+                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          const Spacer(),
-                          Text(
-                            'L  E  A  N',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w300,
-                              letterSpacing: 8,
-                              color: colors.logoColor.withOpacity(0.4),
-                            ),
-                          ),
-                          const Spacer(),
-                          // Todo counter (clickable)
-                          Consumer<EntryProvider>(
-                            builder: (context, provider, _) {
-                              // Count from ALL entries, not just filtered ones (PWA behavior)
-                              final todoCount = provider.openTodoCount;
-
-                              if (todoCount == 0) {
-                                return const SizedBox.shrink();
-                              }
-
-                              final isFiltered = provider.filterLabel == 'open todos';
-
-                              return InkWell(
-                                onTap: () {
-                                  PlatformUtils.selectionClick();
-                                  provider.toggleTodoFilter();
+                                    ),
+                                  );
                                 },
-                                borderRadius: BorderRadius.circular(12),
-                                child: Padding(
-                                  // Minimum 48x48pt touch target
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                    vertical: 12,
-                                  ),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isFiltered
-                                          ? colors.accent.withOpacity(0.2)
-                                          : colors.inputBackground,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: isFiltered
-                                            ? colors.accent
-                                            : colors.accent.withOpacity(0.3),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      '□ $todoCount',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: isFiltered
-                                            ? colors.accent
-                                            : colors.textPrimary.withOpacity(0.7),
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 5),
+                      // Decorative line - also centered
                       Container(
                         width: double.infinity,
                         alignment: Alignment.center,

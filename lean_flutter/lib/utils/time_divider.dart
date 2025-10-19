@@ -13,14 +13,13 @@ class TimeDivider {
   }
 
   /// Create divider element with padded text
-  /// Example: "━━━━━ Sunday, December 15, 3:42pm ━━━━━"
+  /// Example: "━━ Sunday, December 15, 3:42pm ━━"
+  /// Uses minimal padding for mobile-friendly display
   static String createDividerElement(DateTime now) {
     final text = formatDividerText(now);
-    final textLength = text.length;
-    const totalWidth = 50;
-    final paddingLength = (totalWidth - textLength - 2) ~/ 2;
-    final padding = paddingLength > 3 ? paddingLength : 3;
 
+    // Use minimal padding (just 2-3 hyphens) for mobile-friendly display
+    const padding = 2;
     final leftLine = '━' * padding;
     final rightLine = '━' * padding;
 

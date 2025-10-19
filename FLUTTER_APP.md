@@ -370,6 +370,22 @@ Type → Save → Search. Zero chrome, zero friction, zero compromises.
 - ✅ Enhanced error messages with retry buttons
 - ✅ Professional mobile-first UX matching iOS/Android standards
 
+**Critical Bug Fix - Todo Filter State** (2025-10-19 - 1 hour):
+- [x] **FIXED**: Todo view auto-exit bug - now stays in todo view when marking items done
+- [x] **ROOT CAUSE**: Todo counter was counting from filtered list instead of all entries
+- [x] **SOLUTION**: Added `openTodoCount` getter to count from `_allEntries` (matches PWA)
+- [x] **IMPROVED**: Single state update in `toggleTodo` (no duplicate notifications)
+- [x] **ADDED**: Auto-clear filter when last todo is marked done (PWA behavior)
+- [x] Files changed:
+  - `entry_provider.dart:29-31` - New `openTodoCount` getter
+  - `entry_provider.dart:415-478` - Refactored `toggleTodo` method
+  - `home_screen.dart:310` - Todo counter uses new getter
+- ✅ **VERIFIED**: Flutter now matches PWA behavior exactly:
+  - Click todo counter → view todos
+  - Mark todo done → item vanishes, counter updates
+  - **STAY in todo view** (no auto-exit)
+  - Last todo done → auto-return to normal view
+
 ### 🔲 Phase 4: LLM Intelligence (NEXT)
 ### 🔲 Phase 5: Whisper Voice (Optional)
 
@@ -378,6 +394,7 @@ Type → Save → Search. Zero chrome, zero friction, zero compromises.
 **Current Status**: ✅ Phase 1-3 COMPLETE! Mobile-ready app with native feel.
 
 **What's New (2025-10-19)**:
+- ✅ **CRITICAL BUG FIX**: Todo filter state now matches PWA - stays in todo view when marking done
 - ✅ **PHASE 3 COMPLETE**: Mobile polish with native iOS/Android feel
 - ✅ **MOBILE UX GUIDELINES**: Comprehensive 300-line guide (MOBILE_UX_GUIDELINES.md)
 - ✅ **TOUCH TARGETS**: All interactive elements ≥ 48x48pt

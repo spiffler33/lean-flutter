@@ -574,7 +574,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           itemBuilder: (context, index) {
                             // Show time divider at the top if enabled
                             if (index == 0 && provider.showTimeDivider) {
-                              final dividerText = time_divider_util.TimeDivider.createDividerElement(DateTime.now());
+                              // Mobile-friendly: no decorative hyphens, shorter format
+                              final dividerText = isMobile
+                                  ? time_divider_util.TimeDivider.formatDividerText(DateTime.now())
+                                  : time_divider_util.TimeDivider.createDividerElement(DateTime.now());
+
                               return Container(
                                 width: double.infinity,
                                 alignment: Alignment.center,
@@ -582,8 +586,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Text(
                                   dividerText,
                                   style: TextStyle(
-                                    fontSize: 11,
-                                    letterSpacing: 1,
+                                    fontSize: isMobile ? 10 : 11,
+                                    letterSpacing: isMobile ? 0.5 : 1,
                                     color: colors.timeDivider.withOpacity(0.4),
                                     fontFamily: 'monospace',
                                   ),

@@ -128,9 +128,13 @@ class EntryProvider with ChangeNotifier {
 
         notifyListeners();
 
-        // Sync to Supabase in background
+        // Sync to Supabase (await on web to ensure persistence before signout)
         if (_supabase != null && _supabase!.isAuthenticated) {
-          _syncEntryToCloud(savedEntry);
+          if (kIsWeb) {
+            await _syncEntryToCloud(savedEntry);
+          } else {
+            _syncEntryToCloud(savedEntry); // Background on mobile
+          }
         }
 
         return savedEntry;
@@ -163,9 +167,13 @@ class EntryProvider with ChangeNotifier {
 
       notifyListeners();
 
-      // Sync to cloud
+      // Sync to cloud (await on web to ensure persistence)
       if (_supabase != null && _supabase!.isAuthenticated) {
-        _syncEntryToCloud(entry);
+        if (kIsWeb) {
+          await _syncEntryToCloud(entry);
+        } else {
+          _syncEntryToCloud(entry); // Background on mobile
+        }
       }
     } catch (e) {
       _error = e.toString();

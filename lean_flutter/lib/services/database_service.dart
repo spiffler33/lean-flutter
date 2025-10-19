@@ -208,7 +208,15 @@ class DatabaseService {
 
   /// Mark entry as synced with cloud ID
   Future<void> markAsSynced(int localId, String cloudId) async {
-    if (kIsWeb) return; // Skip on web
+    if (kIsWeb) {
+      // Web: update cloud_id in memory storage
+      final index = _webMemoryStorage.indexWhere((e) => e.id == localId);
+      if (index != -1) {
+        final entry = _webMemoryStorage[index];
+        _webMemoryStorage[index] = entry.copyWith(cloudId: cloudId);
+      }
+      return;
+    }
     final db = await database;
     await db.update(
       'entries',

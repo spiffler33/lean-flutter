@@ -3,13 +3,18 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/entry_provider.dart';
 import '../services/command_handler.dart';
+import '../theme/theme_colors.dart';
 
-/// Floating Action Button for mobile
-/// Shows speed dial menu with quick commands:
+/// Floating Action Button for mobile - Redesigned for frictionless UX
+///
+/// Primary actions (one tap):
 /// - Search
-/// - Export
-/// - Stats
-/// - Theme
+/// - Today
+/// - Themes (visual picker)
+/// - More (reveals secondary menu)
+///
+/// Secondary actions (via More):
+/// - Export, Stats, Yesterday, Week, Clear, Templates
 class MobileFAB extends StatefulWidget {
   const MobileFAB({super.key});
 
@@ -20,6 +25,7 @@ class MobileFAB extends StatefulWidget {
 class _MobileFABState extends State<MobileFAB>
     with SingleTickerProviderStateMixin {
   bool _isExpanded = false;
+  bool _showMoreMenu = false;
   late AnimationController _animationController;
   late Animation<double> _expandAnimation;
 
@@ -45,6 +51,7 @@ class _MobileFABState extends State<MobileFAB>
   void _toggleMenu() {
     setState(() {
       _isExpanded = !_isExpanded;
+      _showMoreMenu = false; // Reset more menu
       if (_isExpanded) {
         _animationController.forward();
       } else {
@@ -57,19 +64,26 @@ class _MobileFABState extends State<MobileFAB>
     if (_isExpanded) {
       setState(() {
         _isExpanded = false;
+        _showMoreMenu = false;
         _animationController.reverse();
       });
     }
   }
 
-  Future<void> _handleCommand(String command) async {
+  void _toggleMoreMenu() {
+    setState(() {
+      _showMoreMenu = !_showMoreMenu;
+    });
+  }
+
+  Future<void> _handleAction(String action) async {
     _closeMenu();
 
     final provider = context.read<EntryProvider>();
     final commandHandler = CommandHandler(provider, context);
 
     // Execute command
-    await commandHandler.handleCommand(command);
+    await commandHandler.handleCommand(action);
   }
 
   @override
@@ -92,7 +106,7 @@ class _MobileFABState extends State<MobileFAB>
                 ),
               ),
 
-            // Speed dial menu items
+            // Menu items
             if (_isExpanded)
               Positioned(
                 bottom: 80,
@@ -101,51 +115,87 @@ class _MobileFABState extends State<MobileFAB>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    // PRIMARY MENU (always visible when expanded)
+
                     // Search
-                    _buildSpeedDialItem(
+                    _buildMenuItem(
                       icon: Icons.search,
                       label: 'Search',
                       colors: colors,
-                      delay: 0,
                       onTap: () async {
                         _closeMenu();
-                        // Show search input dialog
                         final searchTerm = await showDialog<String>(
                           context: context,
                           builder: (context) => _SearchDialog(colors: colors),
                         );
                         if (searchTerm != null && searchTerm.isNotEmpty) {
-                          await _handleCommand('/search $searchTerm');
+                          await _handleAction('/search $searchTerm');
                         }
                       },
                     ),
-                    const SizedBox(height: 12),
-                    // Export
-                    _buildSpeedDialItem(
-                      icon: Icons.download,
-                      label: 'Export',
+                    const SizedBox(height: 10),
+
+                    // Today
+                    _buildMenuItem(
+                      icon: Icons.today,
+                      label: 'Today',
                       colors: colors,
-                      delay: 50,
-                      onTap: () => _handleCommand('/export'),
+                      onTap: () => _handleAction('/today'),
                     ),
-                    const SizedBox(height: 12),
-                    // Stats
-                    _buildSpeedDialItem(
-                      icon: Icons.bar_chart,
-                      label: 'Stats',
+                    const SizedBox(height: 10),
+
+                    // Themes (visual picker)
+                    _buildMenuItem(
+                      icon: Icons.palette,
+                      label: 'Themes',
                       colors: colors,
-                      delay: 100,
-                      onTap: () => _handleCommand('/stats'),
+                      onTap: () {
+                        _closeMenu();
+                        _showThemePicker(context, colors);
+                      },
                     ),
-                    const SizedBox(height: 12),
-                    // Help
-                    _buildSpeedDialItem(
-                      icon: Icons.help_outline,
-                      label: 'Help',
+                    const SizedBox(height: 10),
+
+                    // More (toggle secondary menu)
+                    _buildMenuItem(
+                      icon: _showMoreMenu ? Icons.expand_less : Icons.expand_more,
+                      label: 'More',
                       colors: colors,
-                      delay: 150,
-                      onTap: () => _handleCommand('/help'),
+                      onTap: _toggleMoreMenu,
                     ),
+
+                    // SECONDARY MENU (shown when More is tapped)
+                    if (_showMoreMenu) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        width: 200,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colors.entryBackground,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildCompactMenuItem('Export', Icons.download, colors, () => _handleAction('/export')),
+                            _buildCompactMenuItem('Stats', Icons.bar_chart, colors, () => _handleAction('/stats')),
+                            _buildCompactMenuItem('Yesterday', Icons.history, colors, () => _handleAction('/yesterday')),
+                            _buildCompactMenuItem('Week', Icons.calendar_today, colors, () => _handleAction('/week')),
+                            _buildCompactMenuItem('Clear View', Icons.clear_all, colors, () => _handleAction('/clear')),
+                            const Divider(height: 16),
+                            _buildCompactMenuItem('Essay', Icons.article, colors, () => _handleAction('/essay')),
+                            _buildCompactMenuItem('Idea', Icons.lightbulb_outline, colors, () => _handleAction('/idea')),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -160,9 +210,9 @@ class _MobileFABState extends State<MobileFAB>
                 elevation: 6,
                 child: AnimatedRotation(
                   duration: const Duration(milliseconds: 200),
-                  turns: _isExpanded ? 0.125 : 0, // 45 degree rotation when open
+                  turns: _isExpanded ? 0.125 : 0,
                   child: Icon(
-                    _isExpanded ? Icons.close : Icons.more_horiz,
+                    _isExpanded ? Icons.close : Icons.menu,
                     color: Colors.white,
                     size: 28,
                   ),
@@ -175,11 +225,11 @@ class _MobileFABState extends State<MobileFAB>
     );
   }
 
-  Widget _buildSpeedDialItem({
+  /// Build a primary menu item (icon + label on side)
+  Widget _buildMenuItem({
     required IconData icon,
     required String label,
     required dynamic colors,
-    required int delay,
     required VoidCallback onTap,
   }) {
     return FadeTransition(
@@ -233,6 +283,133 @@ class _MobileFABState extends State<MobileFAB>
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build a compact menu item (for secondary menu)
+  Widget _buildCompactMenuItem(String label, IconData icon, dynamic colors, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: colors.accent),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: colors.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show visual theme picker (no typing required!)
+  void _showThemePicker(BuildContext context, dynamic colors) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.modalBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Choose Theme',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Theme options
+                _buildThemeOption(context, themeProvider, 'minimal', 'Clean minimal', Colors.grey.shade800, const Color(0xFF4CAF50)),
+                _buildThemeOption(context, themeProvider, 'matrix', 'Green terminal', Colors.black, const Color(0xFF00FF41)),
+                _buildThemeOption(context, themeProvider, 'paper', 'Warm paper', const Color(0xFFF5F1E8), const Color(0xFFD4A574)),
+                _buildThemeOption(context, themeProvider, 'midnight', 'Deep blues', const Color(0xFF0A0E27), const Color(0xFF6366F1)),
+                _buildThemeOption(context, themeProvider, 'mono', 'Pure B&W', Colors.black, Colors.white),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildThemeOption(BuildContext context, ThemeProvider themeProvider, String themeName, String description, Color bg, Color accent) {
+    final isActive = themeProvider.currentTheme == themeName;
+
+    return InkWell(
+      onTap: () async {
+        await themeProvider.applyTheme(themeName);
+        if (context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isActive ? accent : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: accent,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    themeName.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: bg.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                    ),
+                  ),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: (bg.computeLuminance() > 0.5 ? Colors.black : Colors.white).withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isActive)
+              Icon(Icons.check_circle, color: accent, size: 20),
           ],
         ),
       ),

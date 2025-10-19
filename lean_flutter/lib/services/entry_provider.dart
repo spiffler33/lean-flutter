@@ -48,19 +48,19 @@ class EntryProvider with ChangeNotifier {
     if (_supabase == null || !_supabase!.isAuthenticated) return;
 
     try {
-      debugPrint('📥 Pulling all entries from Supabase...');
+      print('📥 Pulling all entries from Supabase...');
       final remoteEntries = await _supabase!.fetchEntries(limit: 1000);
 
-      debugPrint('📦 Pulled ${remoteEntries.length} entries from Supabase');
+      print('📦 Pulled ${remoteEntries.length} entries from Supabase');
 
       // Populate web memory storage directly
       for (final remoteEntry in remoteEntries) {
         await _db.insertEntry(remoteEntry);
       }
 
-      debugPrint('✅ Successfully synced entries from cloud');
+      print('✅ Successfully synced entries from cloud');
     } catch (e) {
-      debugPrint('⚠️ Failed to fetch from Supabase: $e');
+      print('⚠️ Failed to fetch from Supabase: $e');
     }
   }
 
@@ -129,12 +129,16 @@ class EntryProvider with ChangeNotifier {
         notifyListeners();
 
         // Sync to Supabase (await on web to ensure persistence before signout)
+        print('🔍 Checking sync conditions: supabase=${_supabase != null}, auth=${_supabase?.isAuthenticated}, web=$kIsWeb');
         if (_supabase != null && _supabase!.isAuthenticated) {
+          print('✅ Sync conditions met, syncing entry ${savedEntry.id}...');
           if (kIsWeb) {
             await _syncEntryToCloud(savedEntry);
           } else {
             _syncEntryToCloud(savedEntry); // Background on mobile
           }
+        } else {
+          print('❌ Sync conditions NOT met - entry will not sync to cloud!');
         }
 
         return savedEntry;
@@ -246,12 +250,13 @@ class EntryProvider with ChangeNotifier {
 
   /// Sync single entry to cloud (background)
   Future<void> _syncEntryToCloud(Entry entry) async {
+    // Use print() for release builds (debugPrint is stripped)
     if (_supabase == null || !_supabase!.isAuthenticated) {
-      debugPrint('⚠️ Sync skipped: Not authenticated');
+      print('⚠️ Sync skipped: Not authenticated (supabase: $_supabase, auth: ${_supabase?.isAuthenticated})');
       return;
     }
     if (entry.id == null) {
-      debugPrint('⚠️ Sync skipped: Entry has no local ID');
+      print('⚠️ Sync skipped: Entry has no local ID');
       return;
     }
 
@@ -259,14 +264,14 @@ class EntryProvider with ChangeNotifier {
     if (_failedSyncEntries.contains(entry.id)) return;
 
     try {
-      debugPrint('☁️ Syncing entry ${entry.id} to Supabase...');
+      print('☁️ Syncing entry ${entry.id} to Supabase...');
       final remoteEntry = await _supabase!.createEntry(entry);
-      debugPrint('✅ Synced entry ${entry.id}, got cloudId: ${remoteEntry.cloudId}');
+      print('✅ Synced entry ${entry.id}, got cloudId: ${remoteEntry.cloudId}');
 
       // Mark as synced in local database (use cloudId instead of id)
       if (remoteEntry.cloudId != null && entry.id != null) {
         await _db.markAsSynced(entry.id!, remoteEntry.cloudId!);
-        debugPrint('✅ Marked entry ${entry.id} as synced with cloudId ${remoteEntry.cloudId}');
+        print('✅ Marked entry ${entry.id} as synced with cloudId ${remoteEntry.cloudId}');
       }
     } catch (e, stackTrace) {
       final errorStr = e.toString();
@@ -281,8 +286,8 @@ class EntryProvider with ChangeNotifier {
       }
 
       // Log other errors (network issues, etc.)
-      debugPrint('❌ Sync failed for entry ${entry.id}: $e');
-      debugPrint('Stack trace: $stackTrace');
+      print('❌ Sync failed for entry ${entry.id}: $e');
+      print('Stack trace: $stackTrace');
 
       // On web, rethrow to notify user of sync failure
       if (kIsWeb) {

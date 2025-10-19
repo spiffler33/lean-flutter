@@ -281,14 +281,27 @@ class DatabaseService {
     return List.generate(maps.length, (i) => Entry.fromJson(maps[i]));
   }
 
+  /// Clear web memory storage (web only)
+  Future<void> clearWebStorage() async {
+    if (kIsWeb) {
+      print('🗑️ Clearing web memory storage...');
+      _webMemoryStorage.clear();
+    }
+  }
+
   /// Clear all entries (for testing)
   Future<void> clearAll() async {
+    if (kIsWeb) {
+      _webMemoryStorage.clear();
+      return;
+    }
     final db = await database;
     await db.delete('entries');
   }
 
   /// Close database
   Future<void> close() async {
+    if (kIsWeb) return; // No database to close on web
     final db = await database;
     await db.close();
     _database = null;

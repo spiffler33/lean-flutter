@@ -62,7 +62,10 @@ class EntryProvider with ChangeNotifier {
 
       print('📦 Pulled ${remoteEntries.length} entries from Supabase');
 
-      // Populate web memory storage directly
+      // Clear existing web memory storage before repopulating
+      await _db.clearWebStorage();
+
+      // Populate web memory storage with fresh data from Supabase
       for (final remoteEntry in remoteEntries) {
         await _db.insertEntry(remoteEntry);
       }

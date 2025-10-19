@@ -283,14 +283,23 @@ class EntryProvider with ChangeNotifier {
     if (_failedSyncEntries.contains(entry.id)) return;
 
     try {
-      print('☁️ Syncing entry ${entry.id} to Supabase...');
-      final remoteEntry = await _supabase!.createEntry(entry);
-      print('✅ Synced entry ${entry.id}, got cloudId: ${remoteEntry.cloudId}');
+      Entry remoteEntry;
 
-      // Mark as synced in local database (use cloudId instead of id)
-      if (remoteEntry.cloudId != null && entry.id != null) {
-        await _db.markAsSynced(entry.id!, remoteEntry.cloudId!);
-        print('✅ Marked entry ${entry.id} as synced with cloudId ${remoteEntry.cloudId}');
+      // Check if entry already exists in cloud (has cloudId)
+      if (entry.cloudId != null) {
+        print('☁️ Updating existing entry ${entry.id} (cloudId: ${entry.cloudId}) in Supabase...');
+        remoteEntry = await _supabase!.updateEntry(entry);
+        print('✅ Updated entry ${entry.id} in Supabase');
+      } else {
+        print('☁️ Creating new entry ${entry.id} in Supabase...');
+        remoteEntry = await _supabase!.createEntry(entry);
+        print('✅ Created entry ${entry.id}, got cloudId: ${remoteEntry.cloudId}');
+
+        // Mark as synced in local database (only for new entries)
+        if (remoteEntry.cloudId != null && entry.id != null) {
+          await _db.markAsSynced(entry.id!, remoteEntry.cloudId!);
+          print('✅ Marked entry ${entry.id} as synced with cloudId ${remoteEntry.cloudId}');
+        }
       }
     } catch (e, stackTrace) {
       final errorStr = e.toString();

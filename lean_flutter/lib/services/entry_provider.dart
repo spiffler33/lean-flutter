@@ -25,9 +25,18 @@ class EntryProvider with ChangeNotifier {
   String? get filterLabel => _filterLabel;
   bool get showTimeDivider => _showTimeDivider;
 
+  /// Set Supabase service reference (synchronous)
+  void setSupabase(SupabaseService supabase) {
+    print('📡 Setting Supabase reference in EntryProvider');
+    _supabase = supabase;
+    notifyListeners();
+  }
+
   /// Initialize with optional Supabase
   Future<void> initialize({SupabaseService? supabase}) async {
-    _supabase = supabase;
+    if (supabase != null) {
+      _supabase = supabase;
+    }
 
     // On web: Fetch from Supabase first (web uses in-memory storage)
     if (kIsWeb && _supabase != null && _supabase!.isAuthenticated) {

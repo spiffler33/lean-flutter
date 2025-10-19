@@ -49,10 +49,19 @@ class LeanApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider(supabaseService)),
         ChangeNotifierProxyProvider<AuthProvider, EntryProvider>(
-          create: (_) => EntryProvider(),
+          create: (_) {
+            final provider = EntryProvider();
+            // Initialize immediately with Supabase reference (even if not authenticated yet)
+            final supabase = supabaseService;
+            if (supabase != null) {
+              provider.setSupabase(supabase);
+            }
+            return provider;
+          },
           update: (_, authProvider, entryProvider) {
-            // Initialize EntryProvider when authenticated
+            // Re-initialize when authentication state changes
             if (authProvider.isAuthenticated && supabaseService != null) {
+              print('🔄 Auth state changed, re-initializing EntryProvider...');
               entryProvider!.initialize(supabase: supabaseService);
             }
             return entryProvider!;

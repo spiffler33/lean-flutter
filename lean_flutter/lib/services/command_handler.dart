@@ -10,7 +10,7 @@ import 'entry_provider.dart';
 import 'user_fact_service.dart';
 import 'event_extraction_service.dart';
 import 'supabase_service.dart';
-import '../commands/patterns_command.dart';
+// import '../commands/patterns_command.dart'; // TODO: Implement patterns command
 
 /// Command handler for /commands like /help, /search, /today, etc.
 /// Matches original PWA implementation exactly
@@ -669,6 +669,11 @@ TREND
 
   /// /patterns - Analyze enrichment patterns
   Future<void> _handlePatterns() async {
+    // TODO: Implement patterns command
+    _showNotification('Pattern analysis coming soon!');
+    return;
+
+    /* Commented out until PatternsCommand is implemented
     try {
       // Get pattern analysis
       final patternsCommand = PatternsCommand.instance;
@@ -676,49 +681,11 @@ TREND
 
       if (!context.mounted) return;
 
-      // Show patterns in a dialog
-      await showDialog(
-        context: context,
-        builder: (context) => Consumer<ThemeProvider>(
-          builder: (context, themeProvider, _) {
-            final colors = themeProvider.colors;
-
-            return AlertDialog(
-              backgroundColor: colors.modalBackground,
-              title: Text(
-                'PATTERNS',
-                style: TextStyle(
-                  color: colors.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 2,
-                  fontFamily: 'monospace',
-                ),
-              ),
-              content: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 500, maxHeight: 500),
-                child: SingleChildScrollView(
-                  child: _buildPatternsContent(htmlContent, colors),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
-                    'Close',
-                    style: TextStyle(color: colors.accent),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      );
-    } catch (e) {
-      _showNotification('Failed to analyze patterns: ${e.toString()}');
-    }
+    */
   }
 
+  // TODO: Implement _buildPatternsContent when PatternsCommand is ready
+  /*
   Widget _buildPatternsContent(String htmlContent, ThemeColors colors) {
     // For now, parse the HTML and display as rich text
     // Remove HTML tags for simple display (later we can enhance this)
@@ -739,6 +706,7 @@ TREND
       ),
     );
   }
+  */
 
   /// /events - View extracted events from entries
   Future<void> _handleEvents(String command) async {

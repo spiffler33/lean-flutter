@@ -741,65 +741,81 @@ TREND
         default:
           _showNotification('Unknown events command. Try /events, /events stats, or /events validate');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Error in _handleEvents: $e');
+      print('Stack trace: $stackTrace');
       _showNotification('Failed to fetch events: ${e.toString()}');
     }
   }
 
   /// Show recent events
   Future<void> _showRecentEvents(EventExtractionService eventService) async {
-    final userId = SupabaseService.instance.userId;
-    if (userId == null) {
-      _showNotification('Please sign in to view events');
-      return;
-    }
+    try {
+      final userId = SupabaseService.instance.userId;
+      if (userId == null) {
+        _showNotification('Please sign in to view events');
+        return;
+      }
 
-    // Use the service method to get recent events
-    final events = await eventService.getRecentEvents(userId, limit: 20);
+      print('Fetching events for user: $userId');
 
-    if (events.isEmpty) {
-      _showNotification('No events extracted yet. Create some entries like "ran 5km" or "spent \$50"');
-      return;
-    }
+      // Use the service method to get recent events
+      final events = await eventService.getRecentEvents(userId, limit: 20);
+
+      print('Retrieved ${events.length} events');
+
+      if (events.isEmpty) {
+        _showNotification('No events extracted yet. Create some entries like "ran 5km" or "spent \$50"');
+        return;
+      }
 
     // Show events in a modal
     if (context.mounted) {
-      final colors = Theme.of(context).extension<ThemeColors>()!;
-
       showDialog(
         context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: colors.modalBackground,
-          title: Text(
-            'EXTRACTED EVENTS',
-            style: TextStyle(
-              color: colors.textPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 2,
-              fontFamily: 'monospace',
-            ),
-          ),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 500, maxHeight: 400),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: events.map((event) => _buildEventDisplay(event, colors)).toList(),
+        builder: (context) => Consumer<ThemeProvider>(
+          builder: (context, themeProvider, _) {
+            final colors = themeProvider.colors;
+
+            return AlertDialog(
+              backgroundColor: colors.modalBackground,
+              title: Text(
+                'EXTRACTED EVENTS',
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 2,
+                  fontFamily: 'monospace',
+                ),
               ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Close',
-                style: TextStyle(color: colors.accent),
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500, maxHeight: 400),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: events.map((event) => _buildEventDisplay(event, colors)).toList(),
+                  ),
+                ),
               ),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    'Close',
+                    style: TextStyle(color: colors.accent),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       );
+    }
+    } catch (e, stackTrace) {
+      print('Error in _showRecentEvents: $e');
+      print('Stack trace: $stackTrace');
+      _showNotification('Error displaying events: ${e.toString()}');
     }
   }
 

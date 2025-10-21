@@ -25,7 +25,8 @@ enum ExtractionMethod {
   metrics('metrics'),     // Extracted via numbers + units
   vlp('vlp'),            // Matched a Very Likely Pattern
   perfective('perfective'), // Perfective past tense
-  mixed('mixed');        // Multiple signals
+  mixed('mixed'),        // Multiple signals
+  llm('llm');           // Extracted via LLM (Claude)
 
   final String value;
   const ExtractionMethod(this.value);
@@ -84,22 +85,38 @@ class EventMetrics {
   });
 
   factory EventMetrics.fromJson(Map<String, dynamic> json) {
+    // Helper function for safe number conversion
+    double? toDoubleOrNull(dynamic value) {
+      if (value == null) return null;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value);
+      return null;
+    }
+
+    int? toIntOrNull(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) return int.tryParse(value);
+      return null;
+    }
+
     return EventMetrics(
-      distanceKm: json['distance_km']?.toDouble(),
-      durationMin: json['duration_min']?.toInt(),
-      speedKmh: json['speed_kmh']?.toDouble(),
-      reps: json['reps']?.toInt(),
-      sets: json['sets']?.toInt(),
-      weightKg: json['weight_kg']?.toDouble(),
-      calories: json['calories']?.toInt(),
-      amount: json['amount']?.toDouble(),
+      distanceKm: toDoubleOrNull(json['distance_km']),
+      durationMin: toIntOrNull(json['duration_min']),
+      speedKmh: toDoubleOrNull(json['speed_kmh']),
+      reps: toIntOrNull(json['reps']),
+      sets: toIntOrNull(json['sets']),
+      weightKg: toDoubleOrNull(json['weight_kg']),
+      calories: toIntOrNull(json['calories']),
+      amount: toDoubleOrNull(json['amount']),
       currency: json['currency'] as String?,
-      hoursSlept: json['hours_slept']?.toDouble(),
-      minutesSlept: json['minutes_slept']?.toInt(),
-      quantity: json['quantity']?.toDouble(),
+      hoursSlept: toDoubleOrNull(json['hours_slept']),
+      minutesSlept: toIntOrNull(json['minutes_slept']),
+      quantity: toDoubleOrNull(json['quantity']),
       unit: json['unit'] as String?,
-      attendees: json['attendees']?.toInt(),
-      meetingDurationMin: json['meeting_duration_min']?.toInt(),
+      attendees: toIntOrNull(json['attendees']),
+      meetingDurationMin: toIntOrNull(json['meeting_duration_min']),
     );
   }
 

@@ -178,6 +178,7 @@ class EnrichmentService {
               'type': eventData['type'],
               'subtype': eventData['subtype'],
               'metrics': eventData['metrics'] ?? {},
+              'context': eventData['context'] ?? {},
               'confidence': confidence,
               'extraction_method': 'llm',
             };

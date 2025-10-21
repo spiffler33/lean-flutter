@@ -37,8 +37,8 @@ serve(async (req: Request) => {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022', // Using latest model
-        max_tokens: 1024,
+        model: 'claude-3-haiku-20240307', // Fast & affordable model (10x cheaper than Sonnet)
+        max_tokens: 512, // Reduced since our JSON responses are ~150-200 tokens
         temperature: 0.3,
         messages: [
           {

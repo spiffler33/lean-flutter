@@ -146,6 +146,24 @@ class _MobileFABState extends State<MobileFAB>
                     ),
                     const SizedBox(height: 10),
 
+                    // Events (AI Intelligence)
+                    _buildMenuItem(
+                      icon: Icons.event_note,
+                      label: 'Events',
+                      colors: colors,
+                      onTap: () => _handleAction('/events'),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Patterns (AI Intelligence)
+                    _buildMenuItem(
+                      icon: Icons.insights,
+                      label: 'Patterns',
+                      colors: colors,
+                      onTap: () => _handleAction('/patterns'),
+                    ),
+                    const SizedBox(height: 10),
+
                     // Themes (visual picker)
                     _buildMenuItem(
                       icon: Icons.palette,
@@ -186,6 +204,7 @@ class _MobileFABState extends State<MobileFAB>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            _buildCompactMenuItem('Context', Icons.psychology, colors, () => _handleAction('/context')),
                             _buildCompactMenuItem('Export', Icons.download, colors, () => _handleAction('/export')),
                             _buildCompactMenuItem('Stats', Icons.bar_chart, colors, () => _handleAction('/stats')),
                             _buildCompactMenuItem('Yesterday', Icons.history, colors, () => _handleAction('/yesterday')),

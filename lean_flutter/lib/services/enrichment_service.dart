@@ -3,9 +3,11 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../models/entry.dart';
 import '../models/enrichment.dart';
+import '../models/event.dart';
 import 'database_service.dart';
 import 'supabase_service.dart';
 import 'anthropic_service.dart';
+import 'event_extraction_service.dart';
 
 /// Service to handle AI enrichment of entries
 /// Uses Anthropic Claude API with fallback to mock data
@@ -14,6 +16,7 @@ class EnrichmentService {
   final DatabaseService _db = DatabaseService.instance;
   final SupabaseService? _supabase;
   final AnthropicService _anthropic = AnthropicService();
+  EventExtractionService? _eventExtractor;
 
   // For web platform - in-memory storage
   static final Map<int, Enrichment> _webEnrichmentStorage = {};
@@ -32,6 +35,14 @@ class EnrichmentService {
 
   /// Initialize the enrichment service
   Future<void> initialize() async {
+    // Initialize event extraction service if Supabase is available
+    if (_supabase != null && _supabase!.client != null) {
+      _eventExtractor = EventExtractionService(_supabase!.client);
+      print('✅ EventExtractionService initialized');
+    } else {
+      print('⚠️ EventExtractionService not initialized - Supabase not available');
+    }
+
     // Start processing timer (check queue every 2 seconds)
     _processingTimer?.cancel();
     _processingTimer = Timer.periodic(const Duration(seconds: 2), (_) {
@@ -87,6 +98,7 @@ class EnrichmentService {
     // Check if already has enrichment
     final existingEnrichment = await getEnrichmentForEntry(entry.id!);
     if (existingEnrichment != null && existingEnrichment.isComplete) {
+      print('⏭️ Entry ${entry.id} already has enrichment, skipping');
       return; // Already enriched
     }
 
@@ -115,22 +127,29 @@ class EnrichmentService {
     _isProcessing = false;
   }
 
-  /// Enrich a single entry using Claude API
+  /// Enrich a single entry using Claude API with integrated event extraction
   Future<void> _enrichEntry(Entry entry) async {
     if (entry.id == null) return;
+
+    // Refresh entry from database to get latest cloudId
+    final refreshedEntry = await _db.getEntryById(entry.id!);
+    if (refreshedEntry != null) {
+      entry = refreshedEntry;
+      print('🔄 Refreshed entry ${entry.id} - cloudId: ${entry.cloudId}');
+    }
 
     final startTime = DateTime.now();
 
     try {
-      // Use Claude API to generate enrichment (with fallback to mock)
-      final enrichment = await _anthropic.generateEnrichment(
+      // Use Claude API to generate enrichment AND extract events in one call
+      final result = await _anthropic.generateEnrichmentWithEvents(
         entry.content,
         entry.id.toString(),
       );
 
       // Calculate processing time
       final processingTime = DateTime.now().difference(startTime).inMilliseconds;
-      final finalEnrichment = enrichment.copyWith(
+      final finalEnrichment = result.enrichment.copyWith(
         processingTimeMs: processingTime,
         processingStatus: 'complete',
       );
@@ -139,6 +158,67 @@ class EnrichmentService {
       await saveEnrichment(finalEnrichment);
 
       print('✅ Enriched entry ${entry.id} in ${processingTime}ms');
+
+      // Process LLM-extracted events
+      if (result.events.isNotEmpty && _supabase != null && entry.cloudId != null && _supabase!.userId != null) {
+        try {
+          print('🎯 Processing ${result.events.length} LLM-extracted events for entry ${entry.id}');
+
+          // Save high-confidence events directly to database
+          final highConfidenceEvents = <Map<String, dynamic>>[];
+          final shadowEvents = <Map<String, dynamic>>[];
+
+          for (final eventData in result.events) {
+            final confidence = (eventData['confidence'] as num?)?.toDouble() ?? 0.5;
+
+            // Create event record
+            final event = {
+              'user_id': _supabase!.userId!,
+              'entry_id': entry.cloudId!,
+              'type': eventData['type'],
+              'subtype': eventData['subtype'],
+              'metrics': eventData['metrics'] ?? {},
+              'confidence': confidence,
+              'extraction_method': 'llm',
+            };
+
+            if (confidence >= 0.85) {
+              highConfidenceEvents.add(event);
+              print('  ✓ High confidence (${confidence.toStringAsFixed(2)}): ${eventData['type']}.${eventData['subtype']}');
+            } else if (confidence >= 0.65) {
+              shadowEvents.add(event);
+              print('  ~ Shadow event (${confidence.toStringAsFixed(2)}): ${eventData['type']}.${eventData['subtype']}');
+            } else {
+              print('  ✗ Low confidence (${confidence.toStringAsFixed(2)}): ${eventData['type']}.${eventData['subtype']} - skipping');
+            }
+          }
+
+          // Save high-confidence events
+          if (highConfidenceEvents.isNotEmpty) {
+            await _supabase!.client.from('events').insert(highConfidenceEvents);
+            print('📊 Saved ${highConfidenceEvents.length} high-confidence events');
+          }
+
+          // Save shadow events for learning
+          if (shadowEvents.isNotEmpty) {
+            final shadowRecords = shadowEvents.map((e) => {
+              ...e,
+              'phrase': entry.content.substring(0, 100.clamp(0, entry.content.length)),
+            }).toList();
+
+            await _supabase!.client.from('shadow_events').insert(shadowRecords);
+            print('👻 Saved ${shadowEvents.length} shadow events for learning');
+          }
+
+        } catch (e) {
+          print('⚠️ Error saving LLM events: $e');
+        }
+      } else if (result.events.isEmpty) {
+        print('ℹ️ No events extracted by LLM for entry ${entry.id}');
+      }
+
+      // Legacy regex-based extraction fallback (can be removed after testing)
+      // The regex-based extraction is now replaced by LLM extraction above
     } catch (e) {
       // Save failed enrichment
       final failedEnrichment = Enrichment(

@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/entry.dart';
 import '../models/user_fact.dart';
+import '../models/event.dart';
 import '../widgets/export_modal.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import 'entry_provider.dart';
 import 'user_fact_service.dart';
+import 'event_extraction_service.dart';
+import 'supabase_service.dart';
+import '../commands/patterns_command.dart';
 
 /// Command handler for /commands like /help, /search, /today, etc.
 /// Matches original PWA implementation exactly
@@ -83,6 +87,16 @@ class CommandHandler {
       return true;
     }
 
+    if (trimmed == '/patterns') {
+      await _handlePatterns();
+      return true;
+    }
+
+    if (trimmed.startsWith('/events')) {
+      await _handleEvents(trimmed);
+      return true;
+    }
+
     return false;
   }
 
@@ -126,6 +140,8 @@ class CommandHandler {
               _buildHelpCommand('◉ /context add', 'Add a fact'),
               _buildHelpCommand('◉ /context remove', 'Remove a fact'),
               _buildHelpCommand('◉ /context clear', 'Clear all facts'),
+              _buildHelpCommand('◈ /patterns', 'Analyze your patterns'),
+              _buildHelpCommand('◈ /events', 'View extracted events'),
 
               const SizedBox(height: 12),
               _buildHelpSection('Templates'),
@@ -649,6 +665,343 @@ TREND
         ),
       ),
     );
+  }
+
+  /// /patterns - Analyze enrichment patterns
+  Future<void> _handlePatterns() async {
+    try {
+      // Get pattern analysis
+      final patternsCommand = PatternsCommand.instance;
+      final htmlContent = await patternsCommand.execute();
+
+      if (!context.mounted) return;
+
+      // Show patterns in a dialog
+      await showDialog(
+        context: context,
+        builder: (context) => Consumer<ThemeProvider>(
+          builder: (context, themeProvider, _) {
+            final colors = themeProvider.colors;
+
+            return AlertDialog(
+              backgroundColor: colors.modalBackground,
+              title: Text(
+                'PATTERNS',
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 2,
+                  fontFamily: 'monospace',
+                ),
+              ),
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500, maxHeight: 500),
+                child: SingleChildScrollView(
+                  child: _buildPatternsContent(htmlContent, colors),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    'Close',
+                    style: TextStyle(color: colors.accent),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    } catch (e) {
+      _showNotification('Failed to analyze patterns: ${e.toString()}');
+    }
+  }
+
+  Widget _buildPatternsContent(String htmlContent, ThemeColors colors) {
+    // For now, parse the HTML and display as rich text
+    // Remove HTML tags for simple display (later we can enhance this)
+    final cleanText = htmlContent
+        .replaceAll(RegExp(r'<[^>]*>'), '') // Remove HTML tags
+        .replaceAll('&gt;', '>')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&amp;', '&')
+        .trim();
+
+    return Text(
+      cleanText,
+      style: TextStyle(
+        fontFamily: 'monospace',
+        fontSize: 12,
+        color: colors.textPrimary,
+        height: 1.5,
+      ),
+    );
+  }
+
+  /// /events - View extracted events from entries
+  Future<void> _handleEvents(String command) async {
+    final parts = command.split(RegExp(r'\s+'));
+
+    // Check if Supabase is available
+    final supabase = SupabaseService.instance;
+    if (!supabase.isAuthenticated) {
+      _showNotification('Events require cloud sync. Please sign in.');
+      return;
+    }
+
+    try {
+      // Create event extraction service
+      final eventService = EventExtractionService(supabase.client);
+
+      // Just "/events" - show recent events
+      if (parts.length == 1) {
+        await _showRecentEvents(eventService);
+        return;
+      }
+
+      // Handle sub-commands
+      final subcommand = parts[1].toLowerCase();
+      switch (subcommand) {
+        case 'stats':
+          await _showEventStats(eventService);
+          break;
+        case 'validate':
+          await _showUnvalidatedEvents(eventService);
+          break;
+        default:
+          _showNotification('Unknown events command. Try /events, /events stats, or /events validate');
+      }
+    } catch (e) {
+      _showNotification('Failed to fetch events: ${e.toString()}');
+    }
+  }
+
+  /// Show recent events
+  Future<void> _showRecentEvents(EventExtractionService eventService) async {
+    final userId = SupabaseService.instance.userId;
+    if (userId == null) {
+      _showNotification('Please sign in to view events');
+      return;
+    }
+
+    // Use the service method to get recent events
+    final events = await eventService.getRecentEvents(userId, limit: 20);
+
+    if (events.isEmpty) {
+      _showNotification('No events extracted yet. Create some entries like "ran 5km" or "spent \$50"');
+      return;
+    }
+
+    // Show events in a modal
+    if (context.mounted) {
+      final colors = Theme.of(context).extension<ThemeColors>()!;
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: colors.modalBackground,
+          title: Text(
+            'EXTRACTED EVENTS',
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 2,
+              fontFamily: 'monospace',
+            ),
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500, maxHeight: 400),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: events.map((event) => _buildEventDisplay(event, colors)).toList(),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Close',
+                style: TextStyle(color: colors.accent),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  /// Build display for a single event
+  Widget _buildEventDisplay(Event event, ThemeColors colors) {
+    final icon = _getEventIcon(event.type);
+    final metricsText = _formatEventMetrics(event);
+    final confidenceText = '${(event.confidence * 100).toStringAsFixed(0)}%';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: colors.textSecondary.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                icon,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${event.type.value}${event.subtype != null ? " (${event.subtype})" : ""}',
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: event.confidence >= 0.85
+                      ? colors.accent.withOpacity(0.2)
+                      : colors.textSecondary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  confidenceText,
+                  style: TextStyle(
+                    color: event.confidence >= 0.85
+                        ? colors.accent
+                        : colors.textSecondary,
+                    fontSize: 10,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (metricsText.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              metricsText,
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: 11,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ],
+          if (event.context.people != null && event.context.people!.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              'With: ${event.context.people!.join(", ")}',
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: 10,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _getEventIcon(EventType type) {
+    switch (type) {
+      case EventType.exercise:
+        return '🏃';
+      case EventType.spend:
+        return '💰';
+      case EventType.sleep:
+        return '😴';
+      case EventType.meeting:
+        return '👥';
+      case EventType.consumption:
+        return '🍽️';
+      case EventType.health:
+        return '❤️';
+    }
+  }
+
+  String _formatEventMetrics(Event event) {
+    final parts = <String>[];
+    final m = event.metrics;
+
+    if (m.distanceKm != null) parts.add('${m.distanceKm}km');
+    if (m.durationMin != null) parts.add('${m.durationMin}min');
+    if (m.amount != null) parts.add('\$${m.amount}');
+    if (m.hoursSlept != null) parts.add('${m.hoursSlept}hrs');
+
+    return parts.join(' • ');
+  }
+
+  /// Show event statistics
+  Future<void> _showEventStats(EventExtractionService eventService) async {
+    final userId = SupabaseService.instance.userId;
+    if (userId == null) return;
+
+    final stats = await eventService.getEventStats(userId);
+    final statsList = stats['stats'] as List<dynamic>;
+
+    if (statsList.isEmpty) {
+      _showNotification('No event statistics available yet');
+      return;
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln('EVENT STATISTICS (Last 30 Days)');
+    buffer.writeln('=' * 30);
+
+    for (final stat in statsList) {
+      final type = stat['event_type'] as String;
+      final count = stat['total_count'] as int;
+      final metrics = stat['avg_metrics'] as Map<String, dynamic>;
+
+      buffer.writeln('\n${type.toUpperCase()}:');
+      buffer.writeln('  Total: $count events');
+
+      if (metrics['avg_distance_km'] != null && metrics['avg_distance_km'] > 0) {
+        buffer.writeln('  Avg Distance: ${metrics['avg_distance_km'].toStringAsFixed(1)}km');
+        buffer.writeln('  Total Distance: ${metrics['total_distance_km'].toStringAsFixed(1)}km');
+      }
+      if (metrics['avg_amount'] != null && metrics['avg_amount'] > 0) {
+        buffer.writeln('  Avg Spend: \$${metrics['avg_amount'].toStringAsFixed(2)}');
+        buffer.writeln('  Total Spend: \$${metrics['total_amount'].toStringAsFixed(2)}');
+      }
+      if (metrics['avg_duration_min'] != null && metrics['avg_duration_min'] > 0) {
+        buffer.writeln('  Avg Duration: ${metrics['avg_duration_min'].toStringAsFixed(0)}min');
+      }
+    }
+
+    _showNotification(buffer.toString());
+  }
+
+  /// Show unvalidated events for confirmation
+  Future<void> _showUnvalidatedEvents(EventExtractionService eventService) async {
+    final userId = SupabaseService.instance.userId;
+    if (userId == null) return;
+
+    final events = await eventService.getUnvalidatedEvents(userId);
+
+    if (events.isEmpty) {
+      _showNotification('No events need validation');
+      return;
+    }
+
+    _showNotification('Found ${events.length} unvalidated events. Validation UI coming soon!');
   }
 
   /// /context - Manage user facts for intelligence enrichment

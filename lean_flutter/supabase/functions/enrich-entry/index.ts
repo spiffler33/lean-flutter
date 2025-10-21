@@ -96,8 +96,21 @@ serve(async (req: Request) => {
       updatedAt: new Date().toISOString(),
     }
 
+    // Process extracted events
+    const events = enrichmentData.events || []
+    const processedEvents = events.map((event: any) => ({
+      type: event.type,
+      subtype: event.subtype,
+      metrics: event.metrics || {},
+      confidence: event.confidence || 0.5,
+    }))
+
     return new Response(
-      JSON.stringify({ success: true, enrichment }),
+      JSON.stringify({
+        success: true,
+        enrichment,
+        events: processedEvents
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -116,7 +129,8 @@ serve(async (req: Request) => {
       JSON.stringify({
         success: false,
         error: error.message,
-        enrichment: fallbackEnrichment
+        enrichment: fallbackEnrichment,
+        events: fallbackEnrichment.events || []
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -129,7 +143,7 @@ serve(async (req: Request) => {
 function buildEnrichmentPrompt(entryText: string, contextString: string): string {
   return `${contextString}
 
-Analyze this journal entry and extract structured information.
+Analyze this journal entry and extract structured information including trackable events.
 
 Entry: "${entryText}"
 
@@ -144,6 +158,24 @@ Extract:
 6. Priority/importance (high, medium, low)
 7. Key insights or decisions made
 
+8. TRACKABLE EVENTS:
+   Extract ONLY concrete, completed activities (NOT intentions, plans, or references):
+   - Exercise: running, swimming, cycling, gym, yoga (with distance/duration if mentioned)
+   - Consumption: coffee, tea, alcohol, meals (with counts/amounts if mentioned)
+   - Spend: purchases, groceries, bills (with amounts if mentioned)
+   - Sleep: sleep duration/quality
+   - Meetings: meetings, calls, appointments (with duration/people if mentioned)
+
+   For each event provide:
+   - type: "exercise" | "consumption" | "spend" | "sleep" | "meeting"
+   - subtype: specific activity (e.g., "run", "swim", "coffee", "lunch")
+   - metrics: relevant measurements as object
+   - confidence: 0.0-1.0 score based on:
+     * 0.9-1.0: Explicit past tense with clear metrics ("ran 5km", "had 3 coffees")
+     * 0.7-0.9: Past tense activity, no metrics ("went running", "had coffee")
+     * 0.5-0.7: Ambiguous mention ("coffee break", "gym day")
+     * 0.0-0.3: Future intent or reference ("will run", "planning to swim")
+
 Return as JSON:
 {
   "sentiment": "string",
@@ -153,7 +185,22 @@ Return as JSON:
   "questions": ["string"],
   "priority": "high|medium|low",
   "insights": ["string"],
-  "summary": "one sentence summary"
+  "summary": "one sentence summary",
+  "events": [
+    {
+      "type": "string",
+      "subtype": "string",
+      "metrics": {
+        "distance_km": number,
+        "duration_min": number,
+        "amount": number,
+        "count": number,
+        "hours_slept": number,
+        "attendees": ["string"]
+      },
+      "confidence": number
+    }
+  ]
 }`
 }
 
@@ -251,6 +298,43 @@ function generateMockEnrichment(entryText: string, entryId: string): any {
     }
   }
 
+  // Basic event extraction using simple regex patterns
+  const events = []
+
+  // Check for running/exercise
+  const runMatch = text.match(/(?:ran|run|jogged|walked|swam|cycled)\s+(\d+(?:\.\d+)?)\s*(?:km|mi|miles?|kilometers?|laps?)/i)
+  if (runMatch) {
+    events.push({
+      type: 'exercise',
+      subtype: 'run',
+      metrics: { distance_km: parseFloat(runMatch[1]) },
+      confidence: 0.8
+    })
+  }
+
+  // Check for coffee
+  const coffeeMatch = text.match(/(?:had|drank|coffee)\s*#?(\d+)|(\d+)\s*(?:coffees?|cups?)/i)
+  if (coffeeMatch) {
+    const count = parseInt(coffeeMatch[1] || coffeeMatch[2])
+    events.push({
+      type: 'consumption',
+      subtype: 'coffee',
+      metrics: { count },
+      confidence: 0.8
+    })
+  }
+
+  // Check for spending
+  const spendMatch = text.match(/(?:spent|paid|bought)\s+\$?(\d+(?:\.\d{2})?)/i)
+  if (spendMatch) {
+    events.push({
+      type: 'spend',
+      subtype: 'purchase',
+      metrics: { amount: parseFloat(spendMatch[1]) },
+      confidence: 0.8
+    })
+  }
+
   return {
     entryId: parseInt(entryId),
     emotion,
@@ -269,5 +353,6 @@ function generateMockEnrichment(entryText: string, entryId: string): any {
     processingStatus: 'completed',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    events, // Include basic events in fallback
   }
 }

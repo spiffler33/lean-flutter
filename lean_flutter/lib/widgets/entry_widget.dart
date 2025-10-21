@@ -140,8 +140,10 @@ class _EntryWidgetState extends State<EntryWidget> {
     final now = DateTime.now();
     final diff = now.difference(dt);
 
-    if (diff.inSeconds < 60) {
+    if (diff.inSeconds < 10) {
       return '◷ just now';
+    } else if (diff.inSeconds < 60) {
+      return '◷ ${diff.inSeconds}s ago';
     } else if (diff.inMinutes < 60) {
       return '◷ ${diff.inMinutes}m ago';
     } else if (diff.inHours < 24) {

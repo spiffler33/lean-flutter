@@ -23,12 +23,12 @@ class AnthropicService {
     };
   }
 
-  /// Generate enrichment for an entry using Claude via Supabase Edge Function
-  Future<Enrichment> generateEnrichment(String entryText, String entryId) async {
+  /// Generate enrichment and extract events for an entry using Claude via Supabase Edge Function
+  Future<({Enrichment enrichment, List<Map<String, dynamic>> events})> generateEnrichmentWithEvents(String entryText, String entryId) async {
     // Check if Supabase is properly configured
     if (!SupabaseConfig.isConfigured) {
       print('⚠️ Supabase not configured, using mock enrichment');
-      return _generateMockEnrichment(entryText, entryId);
+      return (enrichment: _generateMockEnrichment(entryText, entryId), events: <Map<String, dynamic>>[]);
     }
 
     try {
@@ -54,6 +54,9 @@ class AnthropicService {
       // Extract the enrichment data from the Edge Function response
       final enrichmentData = response.data['enrichment'] as Map<String, dynamic>;
 
+      // Extract events from the response
+      final events = List<Map<String, dynamic>>.from(response.data['events'] ?? []);
+
       // The Edge Function already formats the data correctly, so we can directly use it
       // Parse people list (already formatted as list from Edge Function)
       final peopleList = List<Map<String, dynamic>>.from(enrichmentData['people'] ?? []);
@@ -65,7 +68,7 @@ class AnthropicService {
       final decisionsList = List<Map<String, dynamic>>.from(enrichmentData['decisions'] ?? []);
 
       // Create Enrichment object
-      return Enrichment(
+      final enrichment = Enrichment(
         entryId: enrichmentData['entryId'] is int
             ? enrichmentData['entryId']
             : int.tryParse(enrichmentData['entryId'].toString()),
@@ -89,11 +92,19 @@ class AnthropicService {
             : DateTime.now(),
       );
 
+      return (enrichment: enrichment, events: events);
+
     } catch (e) {
       print('❌ Edge Function error: $e');
       print('⚠️ Falling back to mock enrichment');
-      return _generateMockEnrichment(entryText, entryId);
+      return (enrichment: _generateMockEnrichment(entryText, entryId), events: <Map<String, dynamic>>[]);
     }
+  }
+
+  /// Legacy method for backward compatibility
+  Future<Enrichment> generateEnrichment(String entryText, String entryId) async {
+    final result = await generateEnrichmentWithEvents(entryText, entryId);
+    return result.enrichment;
   }
 
   /// Build user context string from facts

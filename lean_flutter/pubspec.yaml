@@ -47,10 +47,12 @@ dependencies:
 
   # HTTP and networking
   http: ^1.2.2
+  dio: ^5.4.0  # For API calls with better error handling
 
   # Utilities
   intl: ^0.19.0
   shared_preferences: ^2.3.4
+  uuid: ^4.2.1
 
 dev_dependencies:
   flutter_test:

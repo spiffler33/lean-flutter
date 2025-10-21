@@ -34,8 +34,9 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 3,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -67,6 +68,69 @@ class DatabaseService {
     await db.execute('''
       CREATE INDEX idx_synced ON entries(synced)
     ''');
+
+    // Create enrichments table
+    await _createEnrichmentsTable(db);
+
+    // Create user facts table
+    await _createUserFactsTable(db);
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add enrichments table in version 2
+      await _createEnrichmentsTable(db);
+    }
+    if (oldVersion < 3) {
+      // Add user facts table in version 3
+      await _createUserFactsTable(db);
+    }
+  }
+
+  Future<void> _createEnrichmentsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE enrichments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entry_id INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+        emotion TEXT,
+        themes TEXT DEFAULT '[]',
+        people TEXT DEFAULT '[]',
+        urgency TEXT DEFAULT 'none',
+        actions TEXT DEFAULT '[]',
+        questions TEXT DEFAULT '[]',
+        decisions TEXT DEFAULT '[]',
+        confidence_scores TEXT DEFAULT '{}',
+        enrichment_version TEXT DEFAULT '1.0',
+        processing_status TEXT DEFAULT 'pending',
+        processing_time_ms INTEGER,
+        error_message TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // Create indexes for performance
+    await db.execute('CREATE INDEX idx_enrichments_entry_id ON enrichments(entry_id)');
+    await db.execute('CREATE INDEX idx_enrichments_status ON enrichments(processing_status)');
+  }
+
+  Future<void> _createUserFactsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE user_facts (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        category TEXT NOT NULL,
+        fact TEXT NOT NULL,
+        entity_refs TEXT DEFAULT '',
+        added_at INTEGER NOT NULL,
+        active INTEGER DEFAULT 1
+      )
+    ''');
+
+    // Create indexes for performance
+    await db.execute('CREATE INDEX idx_user_facts_user_id ON user_facts(user_id)');
+    await db.execute('CREATE INDEX idx_user_facts_category ON user_facts(category)');
+    await db.execute('CREATE INDEX idx_user_facts_active ON user_facts(active)');
   }
 
   /// Insert entry (returns local ID)

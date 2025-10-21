@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/entry.dart';
+import '../models/enrichment.dart';
 import '../providers/theme_provider.dart';
+import '../services/enrichment_service.dart';
 import '../theme/app_theme.dart';
+import '../theme/theme_colors.dart';
 import '../utils/platform_utils.dart';
 
 /// Entry widget with ASCII checkbox support
@@ -35,12 +39,51 @@ class _EntryWidgetState extends State<EntryWidget> {
   bool _isHovering = false;
   bool _isEditing = false;
   late TextEditingController _editController;
+  Enrichment? _enrichment;
+  Timer? _enrichmentTimer;
 
   @override
   void initState() {
     super.initState();
     _editController = TextEditingController(text: widget.entry.content);
     _isEditing = widget.shouldStartEditing;
+    _loadEnrichment();
+
+    // Poll for enrichment updates every 2 seconds
+    // Keep polling until we have a complete/failed enrichment
+    _enrichmentTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      // Poll if:
+      // - No enrichment yet (might be queued)
+      // - Enrichment is processing
+      // - Enrichment is pending
+      if (_enrichment == null ||
+          _enrichment!.isPending ||
+          _enrichment!.isProcessing) {
+        _loadEnrichment();
+      }
+    });
+  }
+
+  Future<void> _loadEnrichment() async {
+    if (widget.entry.id != null) {
+      final enrichment = await EnrichmentService.instance.getEnrichmentForEntry(widget.entry.id!);
+      if (mounted) {
+        // Log for debugging
+        if (enrichment != null) {
+          print('📊 Entry ${widget.entry.id} enrichment status: ${enrichment.processingStatus}');
+        }
+
+        setState(() {
+          _enrichment = enrichment;
+        });
+
+        // Stop polling if enrichment is complete or failed
+        if (enrichment != null && (enrichment.isComplete || enrichment.isFailed)) {
+          print('🛑 Stopping enrichment polling for entry ${widget.entry.id}');
+          _enrichmentTimer?.cancel();
+        }
+      }
+    }
   }
 
   @override
@@ -53,11 +96,17 @@ class _EntryWidgetState extends State<EntryWidget> {
         _editController.text = widget.entry.content;
       });
     }
+
+    // Reload enrichment if entry ID changed
+    if (widget.entry.id != oldWidget.entry.id) {
+      _loadEnrichment();
+    }
   }
 
   @override
   void dispose() {
     _editController.dispose();
+    _enrichmentTimer?.cancel();
     super.dispose();
   }
 
@@ -112,6 +161,42 @@ class _EntryWidgetState extends State<EntryWidget> {
         .replaceAll('#todo', '')
         .replaceAll('#done', '')
         .trim();
+  }
+
+  Widget _buildEnrichmentIndicator(ThemeColors colors) {
+    if (_enrichment == null) return const SizedBox.shrink();
+
+    // Choose icon and color based on status
+    IconData icon;
+    Color color;
+    String tooltip;
+
+    if (_enrichment!.isProcessing) {
+      icon = Icons.bolt; // Lightning bolt for processing
+      color = colors.accent;
+      tooltip = 'Enriching...';
+    } else if (_enrichment!.isComplete) {
+      icon = Icons.check_circle_outline; // Check for complete
+      color = Colors.green.withOpacity(0.7);
+      tooltip = 'AI enriched';
+    } else if (_enrichment!.isFailed) {
+      icon = Icons.error_outline; // Error icon
+      color = Colors.red.withOpacity(0.7);
+      tooltip = 'Enrichment failed';
+    } else {
+      icon = Icons.hourglass_empty; // Pending
+      color = colors.textSecondary;
+      tooltip = 'Pending enrichment';
+    }
+
+    return Tooltip(
+      message: tooltip,
+      child: Icon(
+        icon,
+        size: 14,
+        color: color,
+      ),
+    );
   }
 
   @override
@@ -246,51 +331,88 @@ class _EntryWidgetState extends State<EntryWidget> {
                         ),
 
                       // AI Badges (pill-shaped)  - only show if not editing
-                      if (!_isEditing && _hasAnyBadges())
+                      if (!_isEditing && (_hasAnyBadges() || _hasEnrichmentBadges()))
                         Padding(
                           padding: const EdgeInsets.only(top: 8, bottom: 4),
                           child: Wrap(
                             spacing: 6,
                             runSpacing: 6,
                             children: [
-                              // Mood badge (AI-detected emotion)
-                              if (widget.entry.mood != null && widget.entry.mood!.isNotEmpty)
-                                AiBadge(
-                                  label: widget.entry.mood!,
-                                  type: AiBadgeType.mood,
-                                ),
+                              // Show enrichment data if available (priority over entry data)
+                              if (_enrichment != null && _enrichment!.isComplete) ...[
+                                // Enriched emotion
+                                if (_enrichment!.emotion != null)
+                                  AiBadge(
+                                    label: _enrichment!.emotion!,
+                                    type: AiBadgeType.mood,
+                                  ),
+                                // Enriched themes
+                                ..._enrichment!.themes.map((theme) => AiBadge(
+                                      label: theme,
+                                      type: AiBadgeType.theme,
+                                    )),
+                                // Enriched people
+                                ..._enrichment!.people.map((person) => AiBadge(
+                                      label: person['name'] ?? 'Unknown',
+                                      type: AiBadgeType.people,
+                                    )),
+                                // Enriched urgency
+                                if (_enrichment!.urgency != 'none')
+                                  AiBadge(
+                                    label: _enrichment!.urgency,
+                                    type: _getUrgencyBadgeType(_enrichment!.urgency),
+                                  ),
+                              ] else ...[
+                                // Fall back to entry data if no enrichment
+                                // Mood badge (AI-detected emotion)
+                                if (widget.entry.mood != null && widget.entry.mood!.isNotEmpty)
+                                  AiBadge(
+                                    label: widget.entry.mood!,
+                                    type: AiBadgeType.mood,
+                                  ),
 
-                              // Theme badges
-                              ...widget.entry.themes.map((theme) => AiBadge(
-                                    label: theme,
-                                    type: AiBadgeType.theme,
-                                  )),
+                                // Theme badges
+                                ...widget.entry.themes.map((theme) => AiBadge(
+                                      label: theme,
+                                      type: AiBadgeType.theme,
+                                    )),
 
-                              // People badges
-                              ...widget.entry.people.map((person) => AiBadge(
-                                    label: person,
-                                    type: AiBadgeType.people,
-                                  )),
+                                // People badges
+                                ...widget.entry.people.map((person) => AiBadge(
+                                      label: person,
+                                      type: AiBadgeType.people,
+                                    )),
 
-                              // Urgency badge
-                              if (widget.entry.urgency != 'none')
-                                AiBadge(
-                                  label: widget.entry.urgency,
-                                  type: _getUrgencyBadgeType(widget.entry.urgency),
-                                ),
+                                // Urgency badge
+                                if (widget.entry.urgency != 'none')
+                                  AiBadge(
+                                    label: widget.entry.urgency,
+                                    type: _getUrgencyBadgeType(widget.entry.urgency),
+                                  ),
+                              ],
                             ],
                           ),
                         ),
 
-                      // Timestamp - only show if not editing
+                      // Timestamp and enrichment status - only show if not editing
                       // (spacing handled by content padding-bottom: 6px or badges padding-bottom: 4px)
                       if (!_isEditing)
-                        Text(
-                          _formatTime(widget.entry.createdAt),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: colors.textSecondary,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _formatTime(widget.entry.createdAt),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                            // Enrichment status indicator
+                            if (_enrichment != null) ...[
+                              const SizedBox(width: 8),
+                              _buildEnrichmentIndicator(colors),
+                            ],
+                          ],
                         ),
                     ],
                   ),
@@ -337,6 +459,15 @@ class _EntryWidgetState extends State<EntryWidget> {
         widget.entry.themes.isNotEmpty ||
         widget.entry.people.isNotEmpty ||
         widget.entry.urgency != 'none';
+  }
+
+  bool _hasEnrichmentBadges() {
+    if (_enrichment == null || !_enrichment!.isComplete) return false;
+
+    return (_enrichment!.emotion != null) ||
+        _enrichment!.themes.isNotEmpty ||
+        _enrichment!.people.isNotEmpty ||
+        _enrichment!.urgency != 'none';
   }
 
   AiBadgeType _getUrgencyBadgeType(String urgency) {

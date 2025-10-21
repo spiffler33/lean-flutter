@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/entry.dart';
+import '../models/user_fact.dart';
 import '../widgets/export_modal.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import 'entry_provider.dart';
+import 'user_fact_service.dart';
 
 /// Command handler for /commands like /help, /search, /today, etc.
 /// Matches original PWA implementation exactly
 class CommandHandler {
   final EntryProvider provider;
   final BuildContext context;
+  final UserFactService _userFactService = UserFactService();
 
   CommandHandler(this.provider, this.context);
 
@@ -75,6 +78,11 @@ class CommandHandler {
       return true;
     }
 
+    if (trimmed.startsWith('/context')) {
+      await _handleContext(trimmed);
+      return true;
+    }
+
     return false;
   }
 
@@ -111,6 +119,13 @@ class CommandHandler {
               _buildHelpCommand('▨ /export', 'Export as markdown'),
               _buildHelpCommand('▊ /stats', 'View statistics'),
               _buildHelpCommand('◆ /theme [name]', 'Change theme'),
+
+              const SizedBox(height: 12),
+              _buildHelpSection('Intelligence'),
+              _buildHelpCommand('◉ /context', 'Manage user facts'),
+              _buildHelpCommand('◉ /context add', 'Add a fact'),
+              _buildHelpCommand('◉ /context remove', 'Remove a fact'),
+              _buildHelpCommand('◉ /context clear', 'Clear all facts'),
 
               const SizedBox(height: 12),
               _buildHelpSection('Templates'),
@@ -634,6 +649,224 @@ TREND
         ),
       ),
     );
+  }
+
+  /// /context - Manage user facts for intelligence enrichment
+  Future<void> _handleContext(String command) async {
+    final parts = command.split(RegExp(r'\s+'));
+
+    // Just "/context" - show all facts
+    if (parts.length == 1) {
+      await _showContextFacts();
+      return;
+    }
+
+    final subCommand = parts[1].toLowerCase();
+
+    switch (subCommand) {
+      case 'add':
+        if (parts.length < 3) {
+          _showNotification('Usage: /context add [fact]');
+          return;
+        }
+        // Join the rest as the fact text
+        final fact = parts.sublist(2).join(' ').trim();
+        await _addContextFact(fact);
+        break;
+
+      case 'list':
+        await _showContextFacts();
+        break;
+
+      case 'remove':
+        if (parts.length < 3) {
+          _showNotification('Usage: /context remove [id]');
+          return;
+        }
+        final id = parts[2];
+        await _removeContextFact(id);
+        break;
+
+      case 'clear':
+        await _clearAllContextFacts();
+        break;
+
+      default:
+        _showNotification('Unknown context command. Use: add, list, remove, clear');
+    }
+  }
+
+  /// Add a new context fact
+  Future<void> _addContextFact(String factText) async {
+    if (factText.isEmpty) {
+      _showNotification('Fact cannot be empty');
+      return;
+    }
+
+    // Try to infer category from the fact text
+    String category = 'personal'; // default
+
+    final lowerFact = factText.toLowerCase();
+    if (lowerFact.contains('work') ||
+        lowerFact.contains('job') ||
+        lowerFact.contains('company') ||
+        lowerFact.contains('manager') ||
+        lowerFact.contains('team')) {
+      category = 'work';
+    } else if (lowerFact.contains('live') ||
+               lowerFact.contains('location') ||
+               lowerFact.contains('city') ||
+               lowerFact.contains('country')) {
+      category = 'location';
+    } else if (RegExp(r'\b[A-Z][a-z]+\b').hasMatch(factText)) {
+      // Has capitalized names - might be about people
+      category = 'people';
+    }
+
+    try {
+      final fact = await _userFactService.addFact(
+        category: category,
+        fact: factText,
+      );
+
+      _showNotification('✓ Added context ($category): ${fact.fact.length > 30 ? fact.fact.substring(0, 30) + '...' : fact.fact}');
+    } catch (e) {
+      _showNotification('Failed to add context fact');
+      print('Error adding fact: $e');
+    }
+  }
+
+  /// Show all context facts
+  Future<void> _showContextFacts() async {
+    final formattedFacts = await _userFactService.getFormattedFacts();
+
+    if (!context.mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          final colors = themeProvider.colors;
+
+          return AlertDialog(
+            backgroundColor: colors.modalBackground,
+            title: Text(
+              'CONTEXT',
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 2,
+                fontFamily: 'monospace',
+              ),
+            ),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500, maxHeight: 400),
+              child: SingleChildScrollView(
+                child: Text(
+                  formattedFacts,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                    color: colors.textPrimary,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  'Close',
+                  style: TextStyle(color: colors.accent),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// Remove a context fact by ID
+  Future<void> _removeContextFact(String factId) async {
+    try {
+      // Check if this is a partial ID (first 8 chars)
+      final facts = await _userFactService.getAllFacts();
+
+      UserFact? targetFact;
+      for (final fact in facts) {
+        if (fact.id.startsWith(factId)) {
+          targetFact = fact;
+          break;
+        }
+      }
+
+      if (targetFact == null) {
+        _showNotification('Context fact not found');
+        return;
+      }
+
+      await _userFactService.removeFact(targetFact.id);
+      _showNotification('✓ Removed context fact');
+    } catch (e) {
+      _showNotification('Failed to remove context fact');
+      print('Error removing fact: $e');
+    }
+  }
+
+  /// Clear all context facts
+  Future<void> _clearAllContextFacts() async {
+    if (!context.mounted) return;
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          final colors = themeProvider.colors;
+
+          return AlertDialog(
+            backgroundColor: colors.modalBackground,
+            title: Text(
+              'Clear All Context?',
+              style: TextStyle(color: colors.textPrimary),
+            ),
+            content: Text(
+              'This will remove all your context facts. This action cannot be undone.',
+              style: TextStyle(color: colors.textSecondary),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(color: colors.textSecondary),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(
+                  'Clear All',
+                  style: TextStyle(color: colors.accent),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (confirmed ?? false) {
+      try {
+        await _userFactService.clearAllFacts();
+        _showNotification('✓ Cleared all context facts');
+      } catch (e) {
+        _showNotification('Failed to clear context facts');
+        print('Error clearing facts: $e');
+      }
+    }
   }
 
   void _showNotification(String message) {

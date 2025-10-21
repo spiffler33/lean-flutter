@@ -2,11 +2,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/entry.dart';
 import 'database_service.dart';
+import 'enrichment_service.dart';
 import 'supabase_service.dart';
 
 /// State management for entries with offline-first + Supabase sync
 class EntryProvider with ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
+  final EnrichmentService _enrichmentService = EnrichmentService.instance;
   SupabaseService? _supabase;
 
   List<Entry> _entries = [];
@@ -42,6 +44,9 @@ class EntryProvider with ChangeNotifier {
     if (supabase != null) {
       _supabase = supabase;
     }
+
+    // Initialize enrichment service
+    _enrichmentService.initialize();
 
     // On web: Fetch from Supabase first (web uses in-memory storage)
     if (kIsWeb && _supabase != null && _supabase!.isAuthenticated) {
@@ -151,6 +156,10 @@ class EntryProvider with ChangeNotifier {
         }
 
         notifyListeners();
+
+        // Queue for AI enrichment
+        await _enrichmentService.queueForEnrichment(savedEntry);
+        print('⚡ Queued entry ${savedEntry.id} for AI enrichment');
 
         // Sync to Supabase (await on web to ensure persistence before signout)
         print('🔍 Checking sync conditions: supabase=${_supabase != null}, auth=${_supabase?.isAuthenticated}, web=$kIsWeb');
@@ -510,6 +519,7 @@ class EntryProvider with ChangeNotifier {
   @override
   void dispose() {
     stopBackgroundSync();
+    _enrichmentService.dispose();
     super.dispose();
   }
 }

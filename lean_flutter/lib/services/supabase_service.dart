@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/entry.dart';
+import '../models/enrichment.dart';
+import 'user_fact_service.dart';
 
 // Re-export auth types for convenience
 export 'package:supabase_flutter/supabase_flutter.dart' show User, AuthResponse;
@@ -25,13 +27,33 @@ class SupabaseService {
     );
 
     _instance = SupabaseService._(Supabase.instance.client);
+
+    // Check if there's an existing session and load user facts
+    if (_instance!.isAuthenticated) {
+      try {
+        final userFactService = UserFactService();
+        await userFactService.loadFromCloud();
+        print('✅ Restored user context facts from existing session');
+      } catch (e) {
+        print('⚠️ Failed to restore context facts: $e');
+      }
+    }
   }
 
   /// Check if user is authenticated
   bool get isAuthenticated => _client.auth.currentUser != null;
 
+  /// Check if connected (alias for isAuthenticated)
+  bool get isConnected => isAuthenticated;
+
   /// Get current user ID
   String? get userId => _client.auth.currentUser?.id;
+
+  /// Get current user ID (alias for userId)
+  String? get currentUserId => userId;
+
+  /// Get the Supabase client
+  SupabaseClient get client => _client;
 
   /// Get current user
   Future<User?> getCurrentUser() async {
@@ -48,6 +70,16 @@ class SupabaseService {
 
     if (response.user != null) {
       _userId = response.user!.id;
+
+      // Load user context facts from cloud after successful signup
+      try {
+        final userFactService = UserFactService();
+        await userFactService.loadFromCloud();
+        print('✅ Loaded user context facts after signup');
+      } catch (e) {
+        print('⚠️ Failed to load context facts: $e');
+        // Continue even if context loading fails
+      }
     }
 
     return response;
@@ -62,6 +94,16 @@ class SupabaseService {
 
     if (response.user != null) {
       _userId = response.user!.id;
+
+      // Load user context facts from cloud after successful signin
+      try {
+        final userFactService = UserFactService();
+        await userFactService.loadFromCloud();
+        print('✅ Loaded user context facts after signin');
+      } catch (e) {
+        print('⚠️ Failed to load context facts: $e');
+        // Continue even if context loading fails
+      }
     }
 
     return response;
@@ -182,5 +224,106 @@ class SupabaseService {
         .order('created_at')
         .map((data) =>
             data.map((json) => Entry.fromJson(json)).toList());
+  }
+
+  // ============== ENRICHMENT METHODS ==============
+
+  /// Create enrichment in Supabase
+  Future<Enrichment> createEnrichment(Enrichment enrichment) async {
+    final data = enrichment.toSupabaseJson();
+    data['user_id'] = userId;
+    data.remove('id'); // Let Supabase generate UUID
+
+    final response = await _client
+        .from('enrichments')
+        .insert(data)
+        .select()
+        .single();
+
+    return Enrichment.fromJson(response);
+  }
+
+  /// Update enrichment in Supabase
+  Future<Enrichment> updateEnrichment(Enrichment enrichment) async {
+    if (enrichment.cloudId == null) {
+      throw Exception('Cannot update enrichment without cloud ID');
+    }
+
+    final data = enrichment.toSupabaseJson();
+    data['user_id'] = userId;
+    data['updated_at'] = DateTime.now().toIso8601String();
+
+    final response = await _client
+        .from('enrichments')
+        .update(data)
+        .eq('id', enrichment.cloudId!)
+        .select()
+        .single();
+
+    return Enrichment.fromJson(response);
+  }
+
+  /// Get enrichment for a specific entry
+  Future<Enrichment?> getEnrichmentForEntry(String entryCloudId) async {
+    try {
+      final response = await _client
+          .from('enrichments')
+          .select()
+          .eq('entry_id', entryCloudId)
+          .eq('user_id', userId ?? '')
+          .single();
+
+      return Enrichment.fromJson(response);
+    } catch (e) {
+      // No enrichment found
+      return null;
+    }
+  }
+
+  /// Get all enrichments for user
+  Future<List<Enrichment>> fetchEnrichments({int limit = 50}) async {
+    final response = await _client
+        .from('enrichments')
+        .select()
+        .eq('user_id', userId ?? '')
+        .order('created_at', ascending: false)
+        .limit(limit);
+
+    return (response as List)
+        .map((json) => Enrichment.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Get enrichments with specific status
+  Future<List<Enrichment>> fetchEnrichmentsByStatus(String status) async {
+    final response = await _client
+        .from('enrichments')
+        .select()
+        .eq('user_id', userId ?? '')
+        .eq('processing_status', status)
+        .order('created_at', ascending: false);
+
+    return (response as List)
+        .map((json) => Enrichment.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Delete enrichment
+  Future<void> deleteEnrichment(String cloudId) async {
+    await _client
+        .from('enrichments')
+        .delete()
+        .eq('id', cloudId);
+  }
+
+  /// Watch enrichments for real-time updates
+  Stream<List<Enrichment>> watchEnrichments() {
+    return _client
+        .from('enrichments')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', userId ?? '')
+        .order('created_at')
+        .map((data) =>
+            data.map((json) => Enrichment.fromJson(json)).toList());
   }
 }

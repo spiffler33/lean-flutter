@@ -196,6 +196,29 @@ class DatabaseService {
     );
   }
 
+  /// Get entry by ID
+  Future<Entry?> getEntryById(int id) async {
+    if (kIsWeb) {
+      // Web: search in memory storage
+      try {
+        return _webMemoryStorage.firstWhere((e) => e.id == id);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'entries',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (maps.isEmpty) return null;
+    return Entry.fromJson(maps.first);
+  }
+
   /// Get all entries
   Future<List<Entry>> getEntries({int limit = 50}) async {
     if (kIsWeb) {

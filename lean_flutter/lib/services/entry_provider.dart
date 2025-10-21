@@ -46,7 +46,7 @@ class EntryProvider with ChangeNotifier {
     }
 
     // Initialize enrichment service
-    _enrichmentService.initialize();
+    await _enrichmentService.initialize();
 
     // On web: Fetch from Supabase first (web uses in-memory storage)
     if (kIsWeb && _supabase != null && _supabase!.isAuthenticated) {

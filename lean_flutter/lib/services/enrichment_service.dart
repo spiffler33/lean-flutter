@@ -31,12 +31,47 @@ class EnrichmentService {
   EnrichmentService._() : _supabase = SupabaseService.instance;
 
   /// Initialize the enrichment service
-  void initialize() {
+  Future<void> initialize() async {
     // Start processing timer (check queue every 2 seconds)
     _processingTimer?.cancel();
     _processingTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       _processQueue();
     });
+
+    // Load existing enrichments from Supabase if authenticated
+    if (_supabase?.isAuthenticated ?? false) {
+      await loadEnrichmentsFromCloud();
+    }
+  }
+
+  /// Load all enrichments from Supabase
+  Future<void> loadEnrichmentsFromCloud() async {
+    if (!(_supabase?.isAuthenticated ?? false)) return;
+
+    try {
+      print('📥 Loading enrichments from Supabase...');
+      final enrichments = await _supabase!.fetchEnrichments();
+
+      // Match enrichments to local entries and cache them
+      for (final enrichment in enrichments) {
+        if (enrichment.entryCloudId != null) {
+          // Find the local entry with this cloud ID
+          final entries = await _db.getEntries();
+          for (final entry in entries) {
+            if (entry.cloudId == enrichment.entryCloudId) {
+              // Cache with local entry ID
+              final localEnrichment = enrichment.copyWith(entryId: entry.id);
+              _webEnrichmentStorage[entry.id!] = localEnrichment;
+              break;
+            }
+          }
+        }
+      }
+
+      print('✅ Loaded ${enrichments.length} enrichments from cloud');
+    } catch (e) {
+      print('⚠️ Failed to load enrichments from cloud: $e');
+    }
   }
 
   /// Dispose resources
@@ -233,40 +268,60 @@ class EnrichmentService {
 
   /// Save enrichment to database
   Future<void> saveEnrichment(Enrichment enrichment) async {
-    if (kIsWeb) {
-      // Web: save to memory storage
-      if (enrichment.entryId != null) {
-        _webEnrichmentStorage[enrichment.entryId!] = enrichment;
-      }
-    } else {
-      // Mobile: save to SQLite (TODO: implement SQLite methods)
-      // For now, just store in memory
-      if (enrichment.entryId != null) {
-        _webEnrichmentStorage[enrichment.entryId!] = enrichment;
-      }
+    // Always save to memory first for fast access
+    if (enrichment.entryId != null) {
+      _webEnrichmentStorage[enrichment.entryId!] = enrichment;
     }
 
-    // If authenticated, also save to Supabase
-    // Skip cloud sync for now - needs entry's cloudId which we don't have yet
-    // TODO: Fix this by getting the entry's cloudId first
-    /*
+    // Save to Supabase if authenticated
     if (_supabase?.isAuthenticated ?? false) {
       try {
-        await _supabase!.createEnrichment(enrichment);
+        // Get the entry to find its cloudId
+        final entry = await _db.getEntryById(enrichment.entryId!);
+        if (entry != null && entry.cloudId != null) {
+          // Create enrichment with entry's cloud ID
+          final cloudEnrichment = enrichment.copyWith(
+            entryCloudId: entry.cloudId,
+            userId: _supabase!.userId,
+          );
+          await _supabase!.createEnrichment(cloudEnrichment);
+          print('☁️ Saved enrichment to Supabase for entry ${enrichment.entryId}');
+        }
       } catch (e) {
-        print('Failed to sync enrichment to cloud: $e');
+        print('⚠️ Failed to sync enrichment to cloud: $e');
+        // Continue - enrichment is still saved locally
       }
     }
-    */
   }
 
   /// Get enrichment for an entry
   Future<Enrichment?> getEnrichmentForEntry(int entryId) async {
-    if (kIsWeb || true) { // Using memory storage for now
+    // Check memory storage first
+    if (_webEnrichmentStorage.containsKey(entryId)) {
       return _webEnrichmentStorage[entryId];
     }
 
-    // TODO: Implement SQLite retrieval
+    // If not in memory and connected to Supabase, try to fetch from cloud
+    if (_supabase?.isAuthenticated ?? false) {
+      try {
+        // Get the entry to find its cloudId
+        final entry = await _db.getEntryById(entryId);
+        if (entry != null && entry.cloudId != null) {
+          final enrichment = await _supabase!.getEnrichmentForEntry(entry.cloudId!);
+          if (enrichment != null) {
+            // Update the local entryId to match our local database
+            final localEnrichment = enrichment.copyWith(entryId: entryId);
+            // Cache in memory for future access
+            _webEnrichmentStorage[entryId] = localEnrichment;
+            print('📥 Loaded enrichment from Supabase for entry $entryId');
+            return localEnrichment;
+          }
+        }
+      } catch (e) {
+        print('⚠️ Failed to fetch enrichment from cloud: $e');
+      }
+    }
+
     return null;
   }
 

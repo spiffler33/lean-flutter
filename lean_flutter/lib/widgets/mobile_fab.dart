@@ -5,7 +5,7 @@ import '../services/entry_provider.dart';
 import '../services/command_handler.dart';
 import '../theme/theme_colors.dart';
 
-/// Floating Action Button for mobile - Redesigned for frictionless UX
+/// Floating Action Button for mobile - Minimal design matching web help menu
 ///
 /// Primary actions (one tap):
 /// - Search
@@ -14,7 +14,8 @@ import '../theme/theme_colors.dart';
 /// - More (reveals secondary menu)
 ///
 /// Secondary actions (via More):
-/// - Export, Stats, Yesterday, Week, Clear, Templates
+/// - Intelligence: Insights, Analyze, Context
+/// - Actions: Export, Yesterday, Week, Clear
 class MobileFAB extends StatefulWidget {
   final Function(String)? onTemplateInsert;
 
@@ -146,33 +147,6 @@ class _MobileFABState extends State<MobileFAB>
                     ),
                     const SizedBox(height: 10),
 
-                    // Events (AI Intelligence)
-                    _buildMenuItem(
-                      icon: Icons.event_note,
-                      label: 'Events',
-                      colors: colors,
-                      onTap: () => _handleAction('/events'),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Patterns (AI Intelligence)
-                    _buildMenuItem(
-                      icon: Icons.pattern,
-                      label: 'Patterns',
-                      colors: colors,
-                      onTap: () => _handleAction('/patterns'),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Insights (AI Intelligence)
-                    _buildMenuItem(
-                      icon: Icons.insights,
-                      label: 'Insights',
-                      colors: colors,
-                      onTap: () => _handleAction('/insights'),
-                    ),
-                    const SizedBox(height: 10),
-
                     // Themes (visual picker)
                     _buildMenuItem(
                       icon: Icons.palette,
@@ -213,11 +187,13 @@ class _MobileFABState extends State<MobileFAB>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            // Intelligence commands (from help menu)
+                            _buildCompactMenuItem('Insights', Icons.insights, colors, () => _handleAction('/insights')),
                             _buildCompactMenuItem('Analyze', Icons.analytics, colors, () => _handleAction('/analyze')),
-                            _buildCompactMenuItem('Streaks', Icons.local_fire_department, colors, () => _handleAction('/streaks')),
                             _buildCompactMenuItem('Context', Icons.psychology, colors, () => _handleAction('/context')),
+                            const Divider(height: 16),
+                            // Basic commands
                             _buildCompactMenuItem('Export', Icons.download, colors, () => _handleAction('/export')),
-                            _buildCompactMenuItem('Stats', Icons.bar_chart, colors, () => _handleAction('/stats')),
                             _buildCompactMenuItem('Yesterday', Icons.history, colors, () => _handleAction('/yesterday')),
                             _buildCompactMenuItem('Week', Icons.calendar_today, colors, () => _handleAction('/week')),
                             _buildCompactMenuItem('Clear View', Icons.clear_all, colors, () => _handleAction('/clear')),

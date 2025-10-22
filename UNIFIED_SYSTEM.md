@@ -2,17 +2,33 @@
 
 ## Current State (October 2025)
 
+### Recent Updates (Latest)
+- **Fixed Insights Personality**: Removed emojis, exclamation marks, cheerful tone
+- **Implemented Stoic Voice**: ASCII aesthetic, factual observations only, 3-4 insights max
+- **Corrected Pattern Interpretation**: Sarah patterns now correctly show as negative/stressed
+- **Cleaned Mobile FAB**: Removed Events/Patterns/Streaks/Stats from visible menu
+- **Aligned Web & Mobile**: Both interfaces now show same minimal command set
+
 ### Completed
 - **Enrichment Pipeline**: Real-time emotion, themes, people, urgency extraction via Claude
 - **Event Extraction**: LLM-based event detection with confidence scoring
-- **Database Schema**: entries, enrichments, events, shadow_events, vlps tables
+- **Database Schema**: entries, enrichments, events, shadow_events, vlps, intelligence_patterns, user_streaks tables
 - **User Context**: /context command for personal facts
+- **Pattern Detection**: Temporal patterns, correlations, causal chains, streaks (background computation)
+- **Insights Generation**: Stoic, minimal insights via Edge Function - WORKING
+- **Mobile FAB**: Clean menu with only essential commands visible
+- **Unified Intelligence**: Single /insights command for all intelligence (patterns computed but not displayed separately)
 
 ### What's Working
 - Entries save instantly, enrich async in ~3 seconds
 - Claude extracts both enrichments AND events in single API call
 - High-confidence events (≥0.85) saved to database
 - Shadow events (0.65-0.85) tracked for learning
+- Pattern detection runs via /analyze command
+- **Insights display with Lean's stoic personality** - ASCII aesthetic, no emojis, factual statements only
+- **Pattern data correctly interpreted** - Sarah showing as negative/stressed in correlations
+- Background computing of patterns/events/streaks (not exposed in UI)
+- Mobile FAB matches web help menu structure
 
 ## Maximizing Intelligence with /context
 
@@ -253,30 +269,41 @@ Remove unnecessary code from failed approaches:
 - Rejected patterns deleted immediately
 - Anonymous patterns never cross users
 
-## Next Commands for Claude Code
+## Current Implementation Status
 
-### Immediate Task: Code Cleanup
-```
-Clean up the codebase for the unified intelligence approach:
+### Available User Commands
+The following commands are exposed to users in both web and mobile:
 
-1. Remove or comment out these commands/features:
-   - /patterns command handler (keep the PatternsCommand class but don't expose to users)
-   - /events display command (keep event extraction, remove display)
-   - Any UI for viewing raw events/patterns
+**Visible Commands:**
+- `/help` - Command list
+- `/context` - Manage personal facts (critical for AI accuracy)
+- `/insights` - View unified intelligence (IMPLEMENTED & WORKING)
+- `/analyze` - Run pattern detection (updates intelligence_patterns table)
+- `/clear` - Clear view
+- `/export` - Export data
+- `/today` - View today's entries
+- `/yesterday` - View yesterday's entries
+- `/week` - View this week's entries
+- `/search [term]` - Search entries
+- `/theme [name]` - Change visual theme
 
-2. Simplify command list to only show:
-   - /help - Command list
-   - /context - Manage personal facts
-   - /clear - Clear entries
-   - /export - Export data
-   - /insights - View intelligence (mark as "coming soon")
+**Hidden but Active (Background Computation):**
+- Event extraction (runs automatically on entry save)
+- Pattern detection (runs when /analyze is called)
+- Streak tracking (updates automatically)
+- Enrichment pipeline (emotions, themes, people extraction)
 
-3. Clean up any test code or experimental features related to patterns/events viewing
+**Removed from UI (per unified approach):**
+- ~~`/patterns`~~ - Raw pattern viewing removed
+- ~~`/events`~~ - Raw event viewing removed
+- ~~`/streaks`~~ - Separate streak viewing removed
+- ~~`/stats`~~ - Statistics view removed
 
-4. Verify event extraction still works in background (it should)
-
-Keep all the extraction logic (enrichments and events) - we're just removing the fragmented viewing commands.
-```
+All intelligence is now unified under `/insights` command which shows:
+- Today's emotional context
+- Active patterns with confidence scores
+- Current streaks
+- Actionable, stoic observations
 
 ### Next Task: Pattern Detection Foundation
 ```
@@ -321,6 +348,14 @@ Start with simple temporal patterns (morning = anxious) and basic streaks (exerc
 
 User types `/insights` and sees:
 
-"Good morning! You're on a 5-day exercise streak 🔥. Today matches your high-energy Tuesday pattern. Heads up: meetings with Sarah tend to run long (avg 2hrs) - you have one at 2pm. Your morning run yesterday led to great focus, matching your usual pattern. Sleep was light (5hrs) which typically means you'll want extra coffee, but try to stop before 2pm for better tomorrow."
+```
+Sarah appears in 38% of stressful entries.
 
-This is intelligence that actually helps.
+5-day exercise streak. Previous best: 7 days.
+
+Morning anxiety detected 5 of 7 days.
+
+Meetings average 2 hours. Consider time-boxing.
+```
+
+This is intelligence that actually helps - stoic, factual, actionable.

@@ -45,16 +45,18 @@ class EntryProvider with ChangeNotifier {
       _supabase = supabase;
     }
 
-    // Initialize enrichment service
-    await _enrichmentService.initialize();
-
     // On web: Fetch from Supabase first (web uses in-memory storage)
+    // This must happen BEFORE initializing enrichments so entries are available
     if (kIsWeb && _supabase != null && _supabase!.isAuthenticated) {
       await _fetchFromSupabaseWeb();
     }
 
     // Load entries from local database
     await loadEntries();
+
+    // Initialize enrichment service AFTER entries are loaded
+    // This ensures enrichments can match with existing entries
+    await _enrichmentService.initialize();
 
     // Start background sync if online
     if (_supabase != null && _supabase!.isAuthenticated) {

@@ -44,7 +44,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             content TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT (datetime('now','localtime')),
             tags TEXT
         )
     """)
@@ -83,7 +83,7 @@ def init_db():
             fact_id INTEGER PRIMARY KEY AUTOINCREMENT,
             fact_text TEXT NOT NULL,
             fact_category TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT (datetime('now','localtime')),
             active BOOLEAN DEFAULT 1
         )
     """)
@@ -99,8 +99,8 @@ def init_db():
             urgency_correlations TEXT DEFAULT '{}',
             time_patterns TEXT DEFAULT '{}',
             confidence_score FLOAT DEFAULT 0.0,
-            first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            first_seen TIMESTAMP DEFAULT (datetime('now','localtime')),
+            last_seen TIMESTAMP DEFAULT (datetime('now','localtime'))
         )
     """)
 
@@ -203,7 +203,7 @@ def calculate_time_decay(last_seen: str, current_time: datetime = None) -> float
     Recent patterns have higher confidence than old ones.
     """
     if current_time is None:
-        current_time = datetime.utcnow()
+        current_time = datetime.now()
 
     try:
         last_seen_dt = datetime.fromisoformat(last_seen)
@@ -227,7 +227,7 @@ def get_relevant_patterns(entry_text: str = "", current_time: datetime = None) -
     Returns formatted string of relevant patterns, max 200 words.
     """
     if current_time is None:
-        current_time = datetime.utcnow()
+        current_time = datetime.now()
 
     try:
         conn = get_db()
@@ -442,7 +442,7 @@ def update_entity_patterns(people: List[str], themes: List[str], emotion: str, u
                     UPDATE entity_patterns
                     SET mention_count = ?, theme_correlations = ?, emotion_correlations = ?,
                         urgency_correlations = ?, time_patterns = ?, confidence_score = ?,
-                        last_seen = CURRENT_TIMESTAMP
+                        last_seen = (datetime('now','localtime'))
                     WHERE entity = ?
                 """, (mention_count, json.dumps(theme_corr), json.dumps(emotion_corr),
                       json.dumps(urgency_corr), json.dumps(time_pat), confidence, person))
@@ -557,11 +557,10 @@ def format_content_with_tags(content: str) -> str:
 
 def get_relative_time(created_at: str) -> str:
     """Convert timestamp to relative time with clock emoji"""
-    # SQLite stores as UTC, but without timezone info
-    # We need to treat the stored time as UTC and compare with current UTC
+    # SQLite stores local time (device time)
     dt = datetime.fromisoformat(created_at)
-    # Get current time in UTC (matching what SQLite stores)
-    now = datetime.utcnow()
+    # Get current local time
+    now = datetime.now()
     delta = now - dt
 
     seconds = int(delta.total_seconds())
@@ -1464,7 +1463,7 @@ async def process_entry_with_llm(entry_id: int, content: str):
         conn = get_db()
         c = conn.cursor()
         entry = c.execute("SELECT created_at FROM entries WHERE id = ?", (entry_id,)).fetchone()
-        created_at = datetime.fromisoformat(entry['created_at']) if entry else datetime.utcnow()
+        created_at = datetime.fromisoformat(entry['created_at']) if entry else datetime.now()
         conn.close()
 
         # Build full context combining facts and relevant patterns
@@ -1498,7 +1497,7 @@ async def process_entry_with_llm(entry_id: int, content: str):
 
         # Get entry timestamp for pattern tracking
         entry = c.execute("SELECT created_at FROM entries WHERE id = ?", (entry_id,)).fetchone()
-        created_at = entry['created_at'] if entry else datetime.utcnow().isoformat()
+        created_at = entry['created_at'] if entry else datetime.now().isoformat()
 
         conn.close()
         print(f"LLM processed entry {entry_id}: emotion={base_result['mood']}, themes={themes}, people={people}, urgency={urgency}")
@@ -1782,7 +1781,7 @@ async def refresh_entry(entry_id: int):
 
     # Check if entry is older than 2 minutes
     created_dt = datetime.fromisoformat(entry['created_at'])
-    age_seconds = (datetime.utcnow() - created_dt).total_seconds()
+    age_seconds = (datetime.now() - created_dt).total_seconds()
     is_old = age_seconds > 120  # 2 minutes
 
     # Check if entry has indicators (LLM processing complete)
@@ -1902,7 +1901,7 @@ async def get_todo_count():
 
     # Check for old todos (> 24 hours)
     has_old_todos = False
-    now = datetime.utcnow()
+    now = datetime.now()
 
     for entry in entries:
         created = datetime.fromisoformat(entry['created_at'])
@@ -1937,9 +1936,9 @@ async def get_stats():
     total_words = sum(len(e['content'].split()) for e in entries)
 
     # Date calculations
-    today = datetime.utcnow().strftime("%Y-%m-%d")
-    week_ago = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
-    month_ago = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d")
+    week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    month_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 
     today_count = len([e for e in entries if e['date'] == today])
     week_count = len([e for e in entries if e['date'] >= week_ago])
@@ -1952,7 +1951,7 @@ async def get_stats():
 
     # Current streak
     if dates:
-        today_date = datetime.utcnow().date()
+        today_date = datetime.now().date()
         for i, date_str in enumerate(dates):
             date = datetime.fromisoformat(date_str).date()
             expected = today_date - timedelta(days=i)
@@ -1985,7 +1984,7 @@ async def get_stats():
     # Last 7 days activity
     activity_7days = []
     for i in range(6, -1, -1):
-        date = datetime.utcnow() - timedelta(days=i)
+        date = datetime.now() - timedelta(days=i)
         date_str = date.strftime("%Y-%m-%d")
         day_name = date.strftime("%a")
         count = len([e for e in entries if e['date'] == date_str])
@@ -1997,7 +1996,7 @@ async def get_stats():
     # Last 30 days for heatmap
     heatmap_data = []
     for i in range(29, -1, -1):
-        date_str = (datetime.utcnow() - timedelta(days=i)).strftime("%Y-%m-%d")
+        date_str = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
         count = len([e for e in entries if e['date'] == date_str])
         heatmap_data.append(count)
 
@@ -2011,7 +2010,7 @@ async def get_stats():
     top_tags = [{'tag': tag, 'count': count} for tag, count in tag_counts.most_common(5)]
 
     # Week trend
-    last_week = (datetime.utcnow() - timedelta(days=14)).strftime("%Y-%m-%d")
+    last_week = (datetime.now() - timedelta(days=14)).strftime("%Y-%m-%d")
     last_week_end = week_ago
     last_week_count = len([e for e in entries if last_week <= e['date'] < last_week_end])
 

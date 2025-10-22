@@ -138,8 +138,22 @@ class DatabaseService {
     if (kIsWeb) {
       // Web: use in-memory storage
       final id = _webMemoryStorage.isEmpty ? 1 : (_webMemoryStorage.map((e) => e.id ?? 0).reduce((a, b) => a > b ? a : b) + 1);
+
+      // CRITICAL: Preserve the original timestamp from the entry
       final newEntry = entry.copyWith(id: id);
-      _webMemoryStorage.insert(0, newEntry);
+
+      // Insert in the correct position based on created_at timestamp
+      // This ensures proper chronological ordering (newest first)
+      int insertIndex = 0;
+      for (int i = 0; i < _webMemoryStorage.length; i++) {
+        if (_webMemoryStorage[i].createdAt.isBefore(newEntry.createdAt)) {
+          break;
+        }
+        insertIndex = i + 1;
+      }
+
+      _webMemoryStorage.insert(insertIndex, newEntry);
+
       return id;
     }
 
@@ -158,12 +172,28 @@ class DatabaseService {
     }
 
     if (kIsWeb) {
+      print('🔄 DEBUG updateEntry: id=${entry.id}, content="${entry.content.substring(0, entry.content.length > 30 ? 30 : entry.content.length)}..."');
+
       // Web: update in memory storage
       final index = _webMemoryStorage.indexWhere((e) => e.id == entry.id);
+      print('   📍 Found entry at index: $index');
+
       if (index != -1) {
+        print('   📝 Updating entry at index $index');
         _webMemoryStorage[index] = entry;
+
+        // Debug: Check for duplicates after update
+        final duplicates = _webMemoryStorage.where((e) => e.content == entry.content).toList();
+        if (duplicates.length > 1) {
+          print('   ⚠️ WARNING: Found ${duplicates.length} entries with same content!');
+          for (var dup in duplicates) {
+            print('      - ID: ${dup.id}, createdAt: ${dup.createdAt.toIso8601String()}');
+          }
+        }
+
         return 1; // Success
       }
+      print('   ❌ Entry not found in storage!');
       return 0; // Not found
     }
 
@@ -224,8 +254,32 @@ class DatabaseService {
     if (kIsWeb) {
       // Web: return from memory storage
       print('💾 getEntries called: ${_webMemoryStorage.length} total in storage, returning up to $limit');
+
+      // Debug: Check for duplicates in storage
+      final contentMap = <String, List<Entry>>{};
+      for (var entry in _webMemoryStorage) {
+        final key = entry.content.substring(0, entry.content.length > 50 ? 50 : entry.content.length);
+        contentMap[key] = (contentMap[key] ?? [])..add(entry);
+      }
+
+      for (var key in contentMap.keys) {
+        if (contentMap[key]!.length > 1) {
+          print('   ⚠️ DUPLICATE FOUND: "${key}..." appears ${contentMap[key]!.length} times');
+          for (var dup in contentMap[key]!) {
+            print('      - ID: ${dup.id}, createdAt: ${dup.createdAt.toIso8601String()}');
+          }
+        }
+      }
+
       final result = _webMemoryStorage.take(limit).toList();
       print('📋 Returning ${result.length} entries');
+
+      // Debug: Print first few entries being returned
+      print('   📊 First 5 entries being returned:');
+      for (int i = 0; i < result.length && i < 5; i++) {
+        print('      [$i] ID: ${result[i].id}, "${result[i].content.substring(0, result[i].content.length > 30 ? 30 : result[i].content.length)}..." createdAt: ${result[i].createdAt.toIso8601String()}');
+      }
+
       return result;
     }
 

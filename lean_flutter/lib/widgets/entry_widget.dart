@@ -137,8 +137,19 @@ class _EntryWidgetState extends State<EntryWidget> {
   }
 
   String _formatTime(DateTime dt) {
+    // Compare local times (device time)
     final now = DateTime.now();
     final diff = now.difference(dt);
+
+    // Debug logging for timestamp issues
+    if (widget.entry.content.contains('woke up') || widget.entry.content.contains('chalo')) {
+      print('⏰ DEBUG _formatTime for "${widget.entry.content.substring(0, widget.entry.content.length > 30 ? 30 : widget.entry.content.length)}..."');
+      print('   Entry ID: ${widget.entry.id}');
+      print('   Entry createdAt: ${dt.toIso8601String()} (isUtc: ${dt.isUtc})');
+      print('   Now: ${now.toIso8601String()} (isUtc: ${now.isUtc})');
+      print('   Difference: ${diff.inSeconds}s / ${diff.inMinutes}m / ${diff.inHours}h');
+      print('   Will display: ${diff.inSeconds < 10 ? "just now" : diff.inMinutes < 60 ? "${diff.inMinutes}m ago" : "${diff.inHours}h ago"}');
+    }
 
     if (diff.inSeconds < 10) {
       return '◷ just now';

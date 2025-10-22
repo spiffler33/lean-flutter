@@ -49,11 +49,11 @@ class SupabaseService {
   /// Get current user ID
   String? get userId => _client.auth.currentUser?.id;
 
+  /// Get the Supabase client for direct access
+  SupabaseClient get client => _client;
+
   /// Get current user ID (alias for userId)
   String? get currentUserId => userId;
-
-  /// Get the Supabase client
-  SupabaseClient get client => _client;
 
   /// Get current user
   Future<User?> getCurrentUser() async {
@@ -192,7 +192,8 @@ class SupabaseService {
         .from('entries')
         .select()
         .eq('user_id', userId ?? '')
-        .gte('created_at', timestamp.toIso8601String())
+        // Use UTC for comparison (Supabase stores in UTC)
+        .gte('created_at', timestamp.toUtc().toIso8601String())
         .order('created_at', ascending: false);
 
     return (response as List)

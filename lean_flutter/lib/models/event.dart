@@ -254,8 +254,9 @@ class Event {
       'confidence': confidence,
       'extraction_method': extractionMethod.value,
       'user_validated': userValidated,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      // Store local time (not UTC) - remove 'Z' suffix to avoid UTC conversion
+      'created_at': createdAt.toLocal().toIso8601String().replaceFirst(RegExp(r'Z$'), ''),
+      'updated_at': updatedAt.toLocal().toIso8601String().replaceFirst(RegExp(r'Z$'), ''),
     };
   }
 
@@ -401,13 +402,14 @@ class VLP {
       'phrase_normalized': phraseNormalized,
       'event_type': eventType?.value,
       'usage_count': usageCount,
-      'first_seen': firstSeen.toIso8601String(),
-      'last_seen': lastSeen.toIso8601String(),
+      // Store local time (not UTC) - remove 'Z' suffix to avoid UTC conversion
+      'first_seen': firstSeen.toLocal().toIso8601String().replaceFirst(RegExp(r'Z$'), ''),
+      'last_seen': lastSeen.toLocal().toIso8601String().replaceFirst(RegExp(r'Z$'), ''),
       'user_action': userAction,
       'metrics_template': metricsTemplate,
       'confidence_boost': confidenceBoost,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'created_at': createdAt.toLocal().toIso8601String().replaceFirst(RegExp(r'Z$'), ''),
+      'updated_at': updatedAt.toLocal().toIso8601String().replaceFirst(RegExp(r'Z$'), ''),
     };
   }
 

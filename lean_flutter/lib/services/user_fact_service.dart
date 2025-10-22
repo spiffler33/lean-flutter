@@ -358,4 +358,43 @@ class UserFactService {
       print('❌ Failed to load facts from cloud: $e');
     }
   }
+
+  /// Format user facts for LLM context
+  String formatForLLM() {
+    // Get facts synchronously from memory storage (for web) or return empty if not available
+    List<UserFact> facts = [];
+
+    if (kIsWeb) {
+      facts = _webMemoryStorage
+          .where((f) => f.userId == _userId && f.active)
+          .toList();
+    }
+
+    if (facts.isEmpty) {
+      return '';
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln('User context facts:');
+
+    // Group by category for better organization
+    final categories = {
+      'work': <String>[],
+      'personal': <String>[],
+      'people': <String>[],
+      'location': <String>[],
+    };
+
+    for (final fact in facts) {
+      categories[fact.category]?.add(fact.fact);
+    }
+
+    for (final entry in categories.entries) {
+      if (entry.value.isNotEmpty) {
+        buffer.writeln('${entry.key}: ${entry.value.join(', ')}');
+      }
+    }
+
+    return buffer.toString();
+  }
 }

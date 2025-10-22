@@ -754,8 +754,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   setState(() {
                                     _editingEntryId = null;
                                   });
-                                  // Reload entries to refresh the list
-                                  await provider.loadEntries();
+                                  // No need to reload entries - updateEntry already updates the lists
+                                  // and calls notifyListeners()
                                 },
                                 onCancelEdit: () {
                                   // Clear editing state when edit is cancelled

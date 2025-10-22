@@ -58,7 +58,8 @@ class Entry {
       userId: json['user_id'] as String?,
       deviceId: json['device_id'] as String?,
       content: json['content'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      // Parse timestamp - handle both UTC (with Z) and local time formats
+      createdAt: _parseDateTime(json['created_at'] as String),
       tags: _parseJsonList(json['tags']),
       actions: _parseJsonList(json['actions']),
       mood: json['mood'] as String?,
@@ -76,7 +77,8 @@ class Entry {
       if (userId != null) 'user_id': userId,
       if (deviceId != null) 'device_id': deviceId,
       'content': content,
-      'created_at': createdAt.toIso8601String(),
+      // Store local time as ISO string without timezone suffix
+      'created_at': _formatLocalDateTime(createdAt),
       'tags': jsonEncode(tags),
       'actions': jsonEncode(actions),
       'mood': mood, // Changed from emotion
@@ -94,7 +96,8 @@ class Entry {
       if (userId != null) 'user_id': userId,
       if (deviceId != null) 'device_id': deviceId,
       'content': content,
-      'created_at': createdAt.toIso8601String(),
+      // Store as UTC for Supabase (cloud standard practice)
+      'created_at': createdAt.toUtc().toIso8601String(),
       'tags': tags, // Direct array for PostgreSQL
       'actions': actions, // Direct array for PostgreSQL
       'mood': mood,
@@ -148,6 +151,36 @@ class Entry {
       }
     }
     return [];
+  }
+
+  /// Helper to parse DateTime from various formats (UTC with Z or local)
+  static DateTime _parseDateTime(String dateStr) {
+    // Check if the string contains timezone info (Z or +/-offset)
+    if (dateStr.endsWith('Z') || dateStr.contains('+') || dateStr.contains('T') && dateStr.length > 19) {
+      // Parse as UTC and convert to local
+      return DateTime.parse(dateStr).toLocal();
+    } else {
+      // Parse as local time (no timezone info means local)
+      return DateTime.parse(dateStr);
+    }
+  }
+
+  /// Helper to format DateTime as local ISO string without timezone suffix
+  static String _formatLocalDateTime(DateTime dt) {
+    // Ensure we're working with local time
+    final localDt = dt.toLocal();
+    // Format as ISO string and remove any timezone suffix
+    String iso = localDt.toIso8601String();
+    // Remove Z suffix if present (shouldn't be for local, but just in case)
+    if (iso.endsWith('Z')) {
+      iso = iso.substring(0, iso.length - 1);
+    }
+    // Remove timezone offset if present (e.g., +00:00)
+    final offsetIndex = iso.lastIndexOf(RegExp(r'[+-]\d{2}:\d{2}'));
+    if (offsetIndex > 0) {
+      iso = iso.substring(0, offsetIndex);
+    }
+    return iso;
   }
 
   /// Check if entry is a todo

@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/entry.dart';
 import '../models/user_fact.dart';
-import '../models/event.dart';
 import '../widgets/export_modal.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import 'entry_provider.dart';
 import 'user_fact_service.dart';
-import 'event_extraction_service.dart';
+import 'pattern_detection_service.dart';
 import 'supabase_service.dart';
-// import '../commands/patterns_command.dart'; // TODO: Implement patterns command
+import 'insights_generator_service.dart';
 
 /// Command handler for /commands like /help, /search, /today, etc.
 /// Matches original PWA implementation exactly
@@ -87,13 +86,24 @@ class CommandHandler {
       return true;
     }
 
-    if (trimmed == '/patterns') {
-      await _handlePatterns();
+    // Removed /patterns and /events - now unified under /insights
+    // if (trimmed == '/patterns') {
+    //   await _handlePatterns();
+    //   return true;
+    // }
+
+    // if (trimmed.startsWith('/events')) {
+    //   await _handleEvents(trimmed);
+    //   return true;
+    // }
+
+    if (trimmed == '/insights') {
+      await _handleInsights();
       return true;
     }
 
-    if (trimmed.startsWith('/events')) {
-      await _handleEvents(trimmed);
+    if (trimmed == '/analyze') {
+      await _handleAnalyze();
       return true;
     }
 
@@ -140,8 +150,8 @@ class CommandHandler {
               _buildHelpCommand('◉ /context add', 'Add a fact'),
               _buildHelpCommand('◉ /context remove', 'Remove a fact'),
               _buildHelpCommand('◉ /context clear', 'Clear all facts'),
-              _buildHelpCommand('◈ /patterns', 'Analyze your patterns'),
-              _buildHelpCommand('◈ /events', 'View extracted events'),
+              _buildHelpCommand('🔍 /analyze', '(Dev) Run pattern detection'),
+              _buildHelpCommand('🔮 /insights', 'Get personalized insights'),
 
               const SizedBox(height: 12),
               _buildHelpSection('Templates'),
@@ -577,8 +587,6 @@ TREND
 
   /// Show current theme and options (matches showThemeInfo from main.ts)
   Future<void> _showThemeInfo() async {
-    final themeProvider = context.read<ThemeProvider>();
-
     if (!context.mounted) return;
 
     // Show current theme info like PWA
@@ -667,22 +675,23 @@ TREND
     );
   }
 
-  /// /patterns - Analyze enrichment patterns
-  Future<void> _handlePatterns() async {
-    // TODO: Implement patterns command
-    _showNotification('Pattern analysis coming soon!');
-    return;
-
-    /* Commented out until PatternsCommand is implemented
-    try {
-      // Get pattern analysis
-      final patternsCommand = PatternsCommand.instance;
-      final htmlContent = await patternsCommand.execute();
-
-      if (!context.mounted) return;
-
-    */
-  }
+  // Commented out - replaced by unified /insights command
+  // /// /patterns - Analyze enrichment patterns
+  // Future<void> _handlePatterns() async {
+  //   // TODO: Implement patterns command
+  //   _showNotification('Pattern analysis coming soon!');
+  //   return;
+  //
+  //   /* Commented out until PatternsCommand is implemented
+  //   try {
+  //     // Get pattern analysis
+  //     final patternsCommand = PatternsCommand.instance;
+  //     final htmlContent = await patternsCommand.execute();
+  //
+  //     if (!context.mounted) return;
+  //
+  //   */
+  // }
 
   // TODO: Implement _buildPatternsContent when PatternsCommand is ready
   /*
@@ -708,6 +717,9 @@ TREND
   }
   */
 
+  // Commented out - replaced by unified /insights command
+  // Event extraction still happens in background, just display is removed
+  /*
   /// /events - View extracted events from entries
   Future<void> _handleEvents(String command) async {
     final parts = command.split(RegExp(r'\s+'));
@@ -987,6 +999,7 @@ TREND
 
     _showNotification('Found ${events.length} unvalidated events. Validation UI coming soon!');
   }
+  */
 
   /// /context - Manage user facts for intelligence enrichment
   Future<void> _handleContext(String command) async {
@@ -1150,6 +1163,213 @@ TREND
     } catch (e) {
       _showNotification('Failed to remove context fact');
       print('Error removing fact: $e');
+    }
+  }
+
+  /// /insights - Generate personalized insights using LLM
+  Future<void> _handleInsights() async {
+    print('[CMD-INSIGHTS] /insights command invoked');
+
+    // Check if signed in to Supabase
+    final supabase = SupabaseService.instance;
+    print('[CMD-INSIGHTS] Auth check - Authenticated: ${supabase.isAuthenticated}, User ID: ${supabase.userId}');
+
+    if (!supabase.isAuthenticated || supabase.userId == null) {
+      print('[CMD-INSIGHTS] ❌ User not authenticated');
+      _showNotification('Insights require cloud sync. Please sign in.');
+      return;
+    }
+
+    print('[CMD-INSIGHTS] ✅ User authenticated, generating insights...');
+    _showNotification('🔮 Generating personalized insights...');
+
+    try {
+      // Create insights generator service
+      final insightsService = InsightsGeneratorService(
+        supabase.client,
+        supabase.userId!,
+      );
+
+      print('[CMD-INSIGHTS] InsightsGeneratorService created');
+
+      // Generate insights
+      final insights = await insightsService.generateInsights();
+
+      print('[CMD-INSIGHTS] Insights generated, showing dialog...');
+
+      if (!context.mounted) return;
+
+      // Show insights in a dialog
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: const Row(
+            children: [
+              Icon(Icons.auto_awesome, color: Color(0xFF4CAF50), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Daily Insights',
+                style: TextStyle(
+                  color: Color(0xFFE4E4E7),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Display the insights with markdown formatting
+                  SelectableText(
+                    insights,
+                    style: const TextStyle(
+                      color: Color(0xFFE4E4E7),
+                      fontSize: 14,
+                      height: 1.6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                // Run pattern detection to refresh data
+                _showNotification('🔄 Refreshing pattern data...');
+                final patternService = PatternDetectionService(
+                  supabase.client,
+                  supabase.userId!,
+                );
+                await patternService.detectAllPatterns(days: 30);
+                Navigator.of(context).pop();
+                // Re-run insights with fresh data
+                _handleInsights();
+              },
+              child: const Text(
+                'Refresh',
+                style: TextStyle(color: Color(0xFF71717A)),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Close',
+                style: TextStyle(color: Color(0xFF4CAF50)),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      print('[CMD-INSIGHTS] ✅ Dialog shown successfully');
+
+    } catch (e, stackTrace) {
+      print('[CMD-INSIGHTS] ❌ Error generating insights: $e');
+      print('[CMD-INSIGHTS] Stack trace: $stackTrace');
+      _showNotification('❌ Failed to generate insights. Please try again.');
+    }
+  }
+
+  /// /analyze - Temporary command for testing pattern detection
+  Future<void> _handleAnalyze() async {
+    // Check if signed in to Supabase
+    final supabase = SupabaseService.instance;
+    if (!supabase.isAuthenticated || supabase.userId == null) {
+      _showNotification('Pattern detection requires cloud sync. Please sign in.');
+      return;
+    }
+
+    _showNotification('🔍 Starting pattern analysis...');
+
+    try {
+      // Create pattern detection service
+      final patternService = PatternDetectionService(
+        supabase.client,
+        supabase.userId!,
+      );
+
+      // Run pattern detection
+      final results = await patternService.detectAllPatterns(days: 30);
+
+      // Check for errors
+      if (results.containsKey('error')) {
+        _showNotification('❌ Pattern detection failed: ${results['error']}');
+        return;
+      }
+
+      // Format results message
+      final buffer = StringBuffer();
+      buffer.writeln('✅ Pattern Analysis Complete!');
+      buffer.writeln('');
+      buffer.writeln('📊 Analyzed:');
+      buffer.writeln('  • ${results['total_enrichments_analyzed']} enrichments');
+      buffer.writeln('  • ${results['total_events_analyzed']} events');
+      buffer.writeln('');
+      buffer.writeln('🔍 Detected:');
+      buffer.writeln('  • ${results['temporal_patterns']} temporal patterns');
+      buffer.writeln('  • ${results['correlations']} correlations');
+      buffer.writeln('  • ${results['streaks']} streaks');
+      buffer.writeln('');
+      buffer.writeln('💾 Saved ${results['new_patterns_saved']} new patterns');
+
+      // Show results in a dialog
+      if (!context.mounted) return;
+
+      await showDialog(
+        context: context,
+        builder: (context) => Consumer<ThemeProvider>(
+          builder: (context, themeProvider, _) {
+            final colors = themeProvider.colors;
+            return AlertDialog(
+              backgroundColor: colors.modalBackground,
+              title: Text(
+                'PATTERN DETECTION RESULTS',
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 2,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Text(
+                  buffer.toString(),
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: 13,
+                    height: 1.5,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    'CLOSE',
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    } catch (e) {
+      print('Error in _handleAnalyze: $e');
+      _showNotification('❌ Pattern detection error: ${e.toString()}');
     }
   }
 

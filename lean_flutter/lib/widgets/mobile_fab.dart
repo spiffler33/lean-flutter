@@ -157,10 +157,19 @@ class _MobileFABState extends State<MobileFAB>
 
                     // Patterns (AI Intelligence)
                     _buildMenuItem(
-                      icon: Icons.insights,
+                      icon: Icons.pattern,
                       label: 'Patterns',
                       colors: colors,
                       onTap: () => _handleAction('/patterns'),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Insights (AI Intelligence)
+                    _buildMenuItem(
+                      icon: Icons.insights,
+                      label: 'Insights',
+                      colors: colors,
+                      onTap: () => _handleAction('/insights'),
                     ),
                     const SizedBox(height: 10),
 
@@ -204,6 +213,8 @@ class _MobileFABState extends State<MobileFAB>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            _buildCompactMenuItem('Analyze', Icons.analytics, colors, () => _handleAction('/analyze')),
+                            _buildCompactMenuItem('Streaks', Icons.local_fire_department, colors, () => _handleAction('/streaks')),
                             _buildCompactMenuItem('Context', Icons.psychology, colors, () => _handleAction('/context')),
                             _buildCompactMenuItem('Export', Icons.download, colors, () => _handleAction('/export')),
                             _buildCompactMenuItem('Stats', Icons.bar_chart, colors, () => _handleAction('/stats')),
